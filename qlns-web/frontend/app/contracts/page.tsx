@@ -35,7 +35,7 @@ export default function ContractsPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="h-full flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -70,7 +70,7 @@ export default function ContractsPage() {
         </div>
       </div>
 
-      <div className="w-full">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {isLoading ? (
           <div className="glass flex justify-center h-40 items-center"><Loader2 className="h-6 w-6 animate-spin text-blue-400" /></div>
         ) : (

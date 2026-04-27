@@ -14,7 +14,7 @@ import {
   Loader2, AlertTriangle, CheckCircle2, Clock, Columns3,
   History, X, Info, Server, Lightbulb, BookOpen, Plus,
   LayoutPanelLeft, LayoutPanelTop, PanelRight, Maximize2,
-  GripHorizontal, GripVertical, RefreshCw,
+  GripHorizontal, GripVertical, RefreshCw, Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,16 +27,128 @@ const NODES: { id: NodeId; label: string; color: string }[] = [
 ];
 
 const EXAMPLE_QUERIES = [
-  { label: 'Tất cả nhân viên', sql: 'SELECT TOP 20\n  IDNV, TENNV, GIOITINH, EMAIL, DIENTHOAI\nFROM NhanVien\nORDER BY TENNV' },
-  { label: 'Danh sách bảng', sql: "SELECT TABLE_NAME, TABLE_TYPE\nFROM INFORMATION_SCHEMA.TABLES\nWHERE TABLE_SCHEMA = 'dbo'\nORDER BY TABLE_TYPE, TABLE_NAME" },
-  { label: 'Đếm NV theo chi nhánh', sql: 'SELECT CHINHANH, COUNT(*) AS SoNhanVien\nFROM NhanVien\nGROUP BY CHINHANH\nORDER BY SoNhanVien DESC' },
-  { label: 'Bảng lương TOP 10', sql: 'SELECT TOP 10\n  cc.IDNV, n.TENNV, b.LUONGCOBAN, b.LUONGTHUCTE, b.THUCNHAN\nFROM BangLuong b\nJOIN BangChamCong cc ON b.IDBC = cc.IDBC\nJOIN NhanVien n ON cc.IDNV = n.IDNV\nORDER BY b.THUCNHAN DESC' },
-  { label: 'Cột bảng NhanVien', sql: "SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE\nFROM INFORMATION_SCHEMA.COLUMNS\nWHERE TABLE_NAME = 'NhanVien'\nORDER BY ORDINAL_POSITION" },
-  { label: 'Hợp đồng lao động', sql: 'SELECT TOP 10\n  h.SODH, n.TENNV, h.NGAYBATDAU, h.NGAYKETTHUC, h.LUONGCOBAN, h.TRANGTHAI\nFROM HopDongNV h\nJOIN NhanVien n ON h.IDNV = n.IDNV\nORDER BY h.NGAYBATDAU DESC' },
-  { label: 'Tuyển dụng mở', sql: 'SELECT VITRITD, SOLUONG, LUONGTOITHIEU, LUONGTOIDA, TRANGTHAI\nFROM TuyenDung\nWHERE TRANGTHAI = N\'Đang tuyển\'\nORDER BY SOLUONG DESC' },
-  { label: 'Chấm công T1/2024', sql: "SELECT TOP 20\n  cc.IDNV, n.TENNV, cc.THANG, cc.NAM, cc.TONGNGAYLAM, cc.SONGAYNGHI, cc.SOGIOTANGCA\nFROM BangChamCong cc\nJOIN NhanVien n ON cc.IDNV = n.IDNV\nWHERE cc.THANG = 1 AND cc.NAM = 2024" },
-  { label: 'Cập nhật Server khác', sql: "-- Ví dụ: Đang ở Node CN1 (Hà Nội), cần sửa dữ liệu nhân viên thuộc Node CN2 (Đà Nẵng)\nUPDATE QLNS_CN2.QuanLyNhanSu.dbo.NhanVien\nSET DIENTHOAI = '0988777666'\nWHERE IDNV = 'NC200001'" },
+  { label: 'Tất cả nhân viên', sql: "SELECT IDNV, TENNV, GIOITINH, EMAIL, DIENTHOAI\nFROM NHANVIEN\nWHERE IsDeleted = 0 OR IsDeleted IS NULL\nORDER BY TENNV\nLIMIT 20;\n-- Chú ý: SQLite/Turso dùng LIMIT thay cho SELECT TOP N" },
+  { label: 'Danh sách bảng', sql: "SELECT name, type\nFROM sqlite_master\nWHERE type='table'\nORDER BY name;" },
+  { label: 'Đếm NV theo chi nhánh', sql: "SELECT CHINHANH, COUNT(*) AS SoNhanVien\nFROM NHANVIEN\nWHERE IsDeleted = 0 OR IsDeleted IS NULL\nGROUP BY CHINHANH\nORDER BY SoNhanVien DESC;" },
+  { label: 'Bảng lương TOP 10', sql: "SELECT cc.IDNV, n.TENNV, b.LUONGCOBAN, b.LUONGTHUCTE, b.THUCNHAN\nFROM BANGLUONG b\nJOIN BANGCHAMCONG cc ON b.IDBC = cc.IDBC\nJOIN NHANVIEN n ON cc.IDNV = n.IDNV\nORDER BY b.THUCNHAN DESC\nLIMIT 10;" },
+  { label: 'Cột bảng NHANVIEN', sql: "PRAGMA table_info('NHANVIEN');" },
+  { label: 'Hợp đồng lao động', sql: "SELECT h.SODH, n.TENNV, h.NGAYBATDAU, h.NGAYKETTHUC, h.LUONGCOBAN, h.TRANGTHAI\nFROM HOPDONG h\nJOIN NHANVIEN n ON h.IDNV = n.IDNV\nWHERE h.IsDeleted = 0 OR h.IsDeleted IS NULL\nORDER BY h.NGAYBATDAU DESC\nLIMIT 10;" },
+  { label: 'Tuyển dụng mở', sql: "SELECT VITRITD, SOLUONG, LUONGTOITHIEU, LUONGTOIDA, TRANGTHAI, IDCN\nFROM TUYENDUNG\nWHERE TRANGTHAI = 'Đang tuyển'\nORDER BY SOLUONG DESC;" },
+  { label: 'Chấm công T1/2024', sql: "SELECT cc.IDNV, n.TENNV, cc.THANG, cc.NAM, cc.TONGNGAYLAM, cc.SONGAYNGHI, cc.SOGIOTANGCA\nFROM BANGCHAMCONG cc\nJOIN NHANVIEN n ON cc.IDNV = n.IDNV\nWHERE cc.THANG = 1 AND cc.NAM = 2024\nLIMIT 20;" },
+  { label: 'Xem chi nhánh CN1', sql: "-- Truy vấn dữ liệu riêng của CN1 (Hà Nội)\n-- Chọn node CN1 Hà Nội ở toolbar để xem đúng phân mảnh\nSELECT IDNV, TENNV, GIOITINH, EMAIL, DIENTHOAI, CHINHANH\nFROM NHANVIEN\nWHERE (IsDeleted = 0 OR IsDeleted IS NULL)\nORDER BY TENNV\nLIMIT 20;" },
+  { label: '@node directive', sql: "-- ═══ CROSS-NODE ROUTING ═══════════════════════════════\n-- Tương đương: UPDATE QLNS_CN2.dbo.NHANVIEN SET ...\n-- Dùng directive -- @node: <nodeId> để route sang node khác\n-- Dù đang ở node nào, query sẽ chạy trên node chỉ định\n-- ═══════════════════════════════════════════════════════\n\n-- @node: cn2\nUPDATE NHANVIEN\nSET DIENTHOAI = '0988777666'\nWHERE IDNV = 'NV002';\n\n-- Kết quả: thực thi trên CN2 Đà Nẵng thay vì node hiện tại" },
 ];
+
+// Generate dummy SQL for a specific branch (CHINHANH) — used for distributed insert
+function generateDummySqlForBranch(tableName: string, chinhanh: 'CN1' | 'CN2' | 'CN3', count = 17) {
+  const t = tableName.toUpperCase();
+  const ns = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý'];
+  const ms = ['Văn', 'Hữu', 'Đức', 'Công', 'Quang', 'Thị', 'Ngọc', 'Minh', 'Tuấn', 'Thanh'];
+  const fn = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'M', 'N', 'P', 'Q', 'T', 'V'];
+  const randomName = () => `${ns[Math.floor(Math.random()*ns.length)]} ${ms[Math.floor(Math.random()*ms.length)]} ${fn[Math.floor(Math.random()*fn.length)]}`;
+  const randomPhone = () => '09' + Math.floor(Math.random()*100000000).toString().padStart(8, '0');
+  const chucvuList = ['CV001','CV002','CV003','CV004','CV005','CV006','CV007','CV008'];
+  const trinhdoList = ['TD001','TD002','TD003','TD004','TD005','TD006','TD007'];
+  const phongbanByCN: Record<string, string[]> = {
+    CN1: ['PB_KD1','PB_KT1','PB_HC1'],
+    CN2: ['PB_KD2','PB_MKT2','PB_NS2','PB_KT2'],
+    CN3: ['PB_KD3','PB_KT3','PB_TC3','PB_DA3'],
+  };
+  const dantocList = ['Kinh','Tày','Thái','Mường','Hoa','Chăm'];
+  const tonggiaoList = ['Không','Phật giáo','Thiên Chúa giáo','Hòa Hảo'];
+  const honnhanList = ['Độc thân','Đã kết hôn'];
+
+  if (t !== 'NHANVIEN') {
+    return `-- Bảng ${t} chưa hỗ trợ auto generate trên UI này.\n-- Vui lòng tự viết câu INSERT.\n`;
+  }
+
+  // Prefix ID by branch to avoid collision: CN1→NV1XXXXX, CN2→NV2XXXXX, CN3→NV3XXXXX
+  const prefix = chinhanh === 'CN1' ? '1' : chinhanh === 'CN2' ? '2' : '3';
+  const baseId = Math.floor(Date.now() % 9000) + 1000;
+  const rows: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const id = `NV${prefix}${String(baseId + i).padStart(5, '0')}`;
+    const gt = Math.random() > 0.5 ? 'Nam' : 'Nữ';
+    const pb = phongbanByCN[chinhanh][Math.floor(Math.random() * phongbanByCN[chinhanh].length)];
+    const cv = chucvuList[Math.floor(Math.random()*chucvuList.length)];
+    const td = trinhdoList[Math.floor(Math.random()*trinhdoList.length)];
+    const dt = dantocList[Math.floor(Math.random()*dantocList.length)];
+    const tg = tonggiaoList[Math.floor(Math.random()*tonggiaoList.length)];
+    const hn = honnhanList[Math.floor(Math.random()*honnhanList.length)];
+    const yr = 1975 + Math.floor(Math.random()*25);
+    const mo = String(Math.floor(Math.random()*12)+1).padStart(2,'0');
+    const dy = String(Math.floor(Math.random()*28)+1).padStart(2,'0');
+    rows.push(`('${id}', '${randomName()}', '${gt}', '${yr}-${mo}-${dy}', 'nvnv${id.toLowerCase()}@example.com', '${randomPhone()}', 'Địa chỉ ${chinhanh}-${i+1}', '${dt}', '${tg}', '${hn}', '${td}', '${cv}', '${pb}', '${chinhanh}')`);
+  }
+
+  return `-- ═══ DUMMY DATA: ${count} nhân viên cho ${chinhanh} ══════\n-- Node đích: ${chinhanh === 'CN1' ? 'cn1 (Hà Nội)' : chinhanh === 'CN2' ? 'cn2 (Đà Nẵng)' : 'cn3 (TP.HCM)'}\nINSERT INTO NHANVIEN (IDNV, TENNV, GIOITINH, NGAYSINH, EMAIL, DIENTHOAI, DIACHI, DANTOC, TONGIAO, HONNHAN, TRINHDO, CHUCVU, PHONGBAN, CHINHANH)\nVALUES\n${rows.join(',\n')};`;
+}
+
+function generateDummySql(tableName: string) {
+  const t = tableName.toUpperCase();
+  const ns = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Huỳnh', 'Phan', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Hồ', 'Ngô', 'Dương', 'Lý'];
+  const ms = ['Văn', 'Hữu', 'Đức', 'Công', 'Quang', 'Thị', 'Ngọc', 'Minh', 'Tuấn', 'Thanh'];
+  const fn = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'K', 'L', 'M', 'N', 'P', 'Q', 'T', 'V'];
+  const randomName = () => `${ns[Math.floor(Math.random()*ns.length)]} ${ms[Math.floor(Math.random()*ms.length)]} ${fn[Math.floor(Math.random()*fn.length)]}`;
+  const randomPhone = () => '09' + Math.floor(Math.random()*100000000).toString().padStart(8, '0');
+  // Valid lookup values from schema
+  const chucvuList = ['CV001','CV002','CV003','CV004','CV005','CV006','CV007','CV008'];
+  const trinhdoList = ['TD001','TD002','TD003','TD004','TD005','TD006','TD007'];
+  const phongbanByCN: Record<string, string[]> = {
+    CN1: ['PB_KD1','PB_KT1','PB_HC1'],
+    CN2: ['PB_KD2','PB_MKT2','PB_NS2','PB_KT2'],
+    CN3: ['PB_KD3','PB_KT3','PB_TC3','PB_DA3'],
+  };
+  const dantocList = ['Kinh','Tày','Thái','Mường','Hoa','Chăm'];
+  const tonggiaoList = ['Không','Phật giáo','Thiên Chúa giáo','Hòa Hảo'];
+  const honnhanList = ['Độc thân','Đã kết hôn'];
+  let sql = `-- Lệnh tạo 50 dữ liệu giả ngẫu nhiên cho bảng ${t}\n`;
+  if (t === 'NHANVIEN') {
+    // For NHANVIEN, use branch-split (generateDummySqlForBranch) instead — see DUMMY button handler
+    sql += `-- Dùng nút DUMMY → chọn bảng NHANVIEN để sinh data phân tán đúng node.\n`;
+  } else if (t === 'BANGCHAMCONG') {
+    // Schema: IDBC,IDNV,THANG,NAM,SOGIOTANGCA,SONGAYNGHI,SONGAYDITRE,TONGNGAYLAM,TRANGTHAI
+    sql += `INSERT INTO BANGCHAMCONG (IDBC, IDNV, THANG, NAM, TONGNGAYLAM, SONGAYNGHI, SONGAYDITRE, SOGIOTANGCA, TRANGTHAI)\nVALUES\n`;
+    const rows: string[] = [];
+    const baseId = Math.floor(Date.now() % 90000) + 10000;
+    const nvIds = ['NV001','NV002','NV003','NV004','NV005','NV006','NV007','NV008','NV009','NV010','NV011','NV012'];
+    for(let i=0; i<50; i++) {
+        const idbc = 'BCC' + String(baseId + i).padStart(5, '0');
+        const idnv = nvIds[Math.floor(Math.random()*nvIds.length)];
+        const thang = Math.floor(Math.random()*12) + 1;
+        const tongNgay = 20 + Math.floor(Math.random()*7);
+        const ngayNghi = Math.floor(Math.random()*4);
+        const ngayDiTre = Math.floor(Math.random()*3);
+        const tangCa = Math.round(Math.random()*20 * 10) / 10;
+        const tt = Math.random() > 0.3 ? 'Đã duyệt' : 'Chờ duyệt';
+        rows.push(`('${idbc}', '${idnv}', ${thang}, 2024, ${tongNgay}, ${ngayNghi}, ${ngayDiTre}, ${tangCa}, '${tt}')`);
+    }
+    sql += rows.join(',\n') + ';';
+  } else if (t === 'BANGLUONG') {
+    // Schema: IDBL,IDBC,LUONGCOBAN,LUONGTHUCTE,THUETNCN,LUONGTHUONG,PHUCAPCHUCVU,KHOANTRUBAOHIEM,PHUCAPKHAC,KHOANTRUKHAC,THUCNHAN
+    sql += `INSERT INTO BANGLUONG (IDBL, IDBC, LUONGCOBAN, LUONGTHUCTE, THUETNCN, LUONGTHUONG, PHUCAPCHUCVU, KHOANTRUBAOHIEM, PHUCAPKHAC, KHOANTRUKHAC, THUCNHAN)\nVALUES\n`;
+    const rows: string[] = [];
+    const baseId = Math.floor(Date.now() % 90000) + 10000;
+    for(let i=0; i<50; i++) {
+        const idbl = 'BL' + String(baseId + i).padStart(5, '0');
+        const idbc = 'BCC' + String(baseId + i).padStart(5, '0');
+        const lcb = (10 + Math.floor(Math.random()*15)) * 1000000;
+        const luongThucTe = Math.round(lcb * (1 + Math.random()*0.1));
+        const thueTNCN = Math.round(lcb * 0.02);
+        const thuong = Math.random() > 0.5 ? Math.round(lcb * 0.1) : 0;
+        const phucapCV = Math.round(lcb * 0.1);
+        const baohiem = Math.round(lcb * 0.08);
+        const phucapKhac = Math.round(Math.random() * 500000);
+        const khoantruKhac = 0;
+        const thucNhan = luongThucTe + thuong + phucapCV + phucapKhac - thueTNCN - baohiem - khoantruKhac;
+        rows.push(`('${idbl}', '${idbc}', ${lcb}, ${luongThucTe}, ${thueTNCN}, ${thuong}, ${phucapCV}, ${baohiem}, ${phucapKhac}, ${khoantruKhac}, ${thucNhan})`);
+    }
+    sql += rows.join(',\n') + ';';
+  } else {
+    sql += `-- Bảng ${t} hiện chưa được hỗ trợ auto generate data trên UI này.\n-- Vui lòng tự viết truy vấn INSERT.\n`;
+  }
+  return sql;
+}
 
 const DOC_CONTENT = `# Tài liệu Hệ thống CSDL Phân Tán
 
@@ -59,29 +171,29 @@ const DOC_CONTENT = `# Tài liệu Hệ thống CSDL Phân Tán
 
 | Bảng | Mô tả | Phân mảnh |
 |------|-------|-----------|
-| NhanVien | Thông tin nhân viên | Theo CHINHANH |
-| BangChamCong | Bảng chấm công | Theo CN nhân viên |
-| BangLuong | Bảng lương | Theo CN nhân viên |
-| HopDongNV | Hợp đồng lao động | Theo CN |
-| TuyenDung | Tuyển dụng | Theo CN |
-| ChucVu | Chức vụ (lookup) | Tập trung Master |
-| PhongBan | Phòng ban | Master + CN |
-| ChiNhanh | Danh sách chi nhánh | Master |
-| TrinhDo | Trình độ học vấn | Master |
+| NHANVIEN | Thông tin nhân viên | Theo CHINHANH |
+| BANGCHAMCONG | Bảng chấm công | Theo CN nhân viên |
+| BANGLUONG | Bảng lương | Theo CN nhân viên |
+| HOPDONG | Hợp đồng lao động | Theo CN |
+| TUYENDUNG | Tuyển dụng | Theo CN |
+| CHUCVU | Chức vụ (lookup) | Tập trung Master |
+| PHONGBAN | Phòng ban | Master + CN |
+| CHINHANH | Danh sách chi nhánh | Master |
+| TRINHDO | Trình độ học vấn | Master |
 
-## 🔗 Cách servers liên lạc
+## 🔀 Cập nhật dữ liệu trên server khác
 
-Các node dùng **Linked Server** trong SQL Server để truy vấn chéo:
+Đây là hệ thống phân tán dùng Turso (SQLite). Để chỉnh sửa dữ liệu\ntrên một node cụ thể:
+
+1. **Chọn Node đích** ở thanh công cụ (ô tròn màu góc trên)
+2. **Chạy câu lệnh** — backend tự động gửi đến node đã chọn
+3. **Đồng bộ Master** — thay đổi tự động sync về Master
+
 \`\`\`sql
--- Query từ Master xuống CN1
-SELECT * FROM [CN1_SERVER].QuanLyNhanSu.dbo.NhanVien
-
--- UNION ALL từ tất cả branches
-SELECT * FROM NhanVien WHERE CHINHANH = 'CN1'
-UNION ALL
-SELECT * FROM [CN2_SERVER].QuanLyNhanSu.dbo.NhanVien
-UNION ALL
-SELECT * FROM [CN3_SERVER].QuanLyNhanSu.dbo.NhanVien
+-- Ví dụ: Chọn CN2 trên toolbar, sau đó chạy:
+UPDATE NHANVIEN
+SET DIENTHOAI = '0988777666'
+WHERE IDNV = 'NV002';
 \`\`\`
 
 ## 📊 Câu lệnh phân tán mẫu
@@ -90,7 +202,8 @@ SELECT * FROM [CN3_SERVER].QuanLyNhanSu.dbo.NhanVien
 \`\`\`sql
 -- Đếm nhân viên theo chi nhánh
 SELECT CHINHANH, COUNT(*) AS SoNV
-FROM NhanVien
+FROM NHANVIEN
+WHERE IsDeleted = 0 OR IsDeleted IS NULL
 GROUP BY CHINHANH
 ORDER BY SoNV DESC
 \`\`\`
@@ -98,9 +211,9 @@ ORDER BY SoNV DESC
 ### 2. JOIN phân tán
 \`\`\`sql
 SELECT n.TENNV, n.EMAIL, cv.TENCV, pb.TENPB
-FROM NhanVien n
-JOIN ChucVu cv ON n.CHUCVU = cv.IDCV
-JOIN PhongBan pb ON n.PHONGBAN = pb.IDPB
+FROM NHANVIEN n
+JOIN CHUCVU cv ON n.CHUCVU = cv.IDCV
+JOIN PHONGBAN pb ON n.PHONGBAN = pb.IDPB
 ORDER BY n.TENNV
 \`\`\`
 
@@ -112,9 +225,9 @@ SELECT
   AVG(b.THUCNHAN) AS LuongTB,
   MAX(b.THUCNHAN) AS LuongCao,
   MIN(b.THUCNHAN) AS LuongThap
-FROM NhanVien n
-JOIN BangChamCong cc ON n.IDNV = cc.IDNV
-JOIN BangLuong b ON cc.IDBC = b.IDBC
+FROM NHANVIEN n
+JOIN BANGCHAMCONG cc ON n.IDNV = cc.IDNV
+JOIN BANGLUONG b ON cc.IDBC = b.IDBC
 GROUP BY n.CHINHANH
 ORDER BY LuongTB DESC
 \`\`\`
@@ -125,8 +238,8 @@ SELECT
   t.VITRITD, t.SOLUONG,
   t.SOHOSODATUYEN, t.TRANGTHAI,
   c.TENCNHANH
-FROM TuyenDung t
-JOIN ChiNhanh c ON t.IDCN = c.IDCN
+FROM TUYENDUNG t
+JOIN CHINHANH c ON t.IDCN = c.IDCN
 ORDER BY t.SOLUONG DESC
 \`\`\`
 
@@ -136,9 +249,11 @@ ORDER BY t.SOLUONG DESC
 - Dùng **"Xem dữ liệu"** (icon table) để preview nhanh 100 dòng  
 - **Multi-window** — thêm tab để chạy song song nhiều queries  
 - Kéo thanh chia — resize vùng editor/kết quả  
+- **Tên bảng viết HOA** — SQLite phân biệt chữ hoa/thường  
 `;
 
 const HISTORY_KEY = 'sql_terminal_history_v2';
+const SESSION_TABS_KEY = 'sql_terminal_tabs_v1';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 type PanelLayout = 'bottom' | 'right' | 'left' | 'full-editor' | 'full-result';
@@ -164,6 +279,16 @@ function SqlEditor({
 }) {
   const lines = value.split('\n');
   const lineCount = Math.max(lines.length, 6);
+  // Refs to sync scroll between textarea and line numbers
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lineNumRef = useRef<HTMLDivElement>(null);
+
+  // Sync line-number scroll whenever textarea scrolls
+  const syncScroll = () => {
+    if (textareaRef.current && lineNumRef.current) {
+      lineNumRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
+  };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); onRun(); return; }
@@ -179,19 +304,22 @@ function SqlEditor({
 
   return (
     <div className="sql-editor-wrap" style={{ height: '100%' }}>
-      <div className="sql-line-numbers">
+      {/* Line numbers — overflow hidden, scrolled programmatically */}
+      <div ref={lineNumRef} className="sql-line-numbers" style={{ overflowY: 'hidden' }}>
         {Array.from({ length: lineCount }, (_, i) => i + 1).map(n => (
           <div key={n} className={cn(errorLine === n ? 'error-line' : '')} style={{ minHeight: '1.6em' }}>{n}</div>
         ))}
       </div>
       <textarea
+        ref={textareaRef}
         className="sql-textarea"
         value={value}
         onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        onScroll={syncScroll}
         rows={lineCount}
         spellCheck={false} autoComplete="off" autoCorrect="off" autoCapitalize="off"
-        placeholder={"-- Nhập câu lệnh SQL tại đây\n-- Ctrl+Enter để thực thi\nSELECT TOP 10 * FROM NhanVien"}
+        placeholder={"-- Nhập câu lệnh SQL tại đây\n-- Ctrl+Enter để thực thi\nSELECT * FROM NHANVIEN LIMIT 10"}
         style={{ height: '100%' }}
       />
     </div>
@@ -491,11 +619,25 @@ function QueryPane({
             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{tab.result.rowCount.toLocaleString('vi-VN')} dòng</span>
             <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11 }}>{tab.result.columns.length} cột</span>
             {tab.execTime !== null && <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 3 }}><Clock size={10} />{tab.execTime}ms</span>}
+            {/* Fan-out sync info — shown when master DML propagates to branches */}
+            {(tab.result as any).fanOut && (tab.result as any).fanOut.success?.length > 1 && (
+              <span style={{ fontSize: 10, color: '#34d399', background: 'rgba(52,211,153,0.1)', border: '1px solid rgba(52,211,153,0.2)', borderRadius: 20, padding: '2px 8px', display: 'flex', alignItems: 'center', gap: 4 }}>
+                <Server size={9} />
+                Đồng bộ → {(tab.result as any).fanOut.success.filter((n: string) => n !== 'master').map((n: string) => {
+                  const node = NODES.find(x => x.id === n);
+                  return <span key={n} style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ width: 5, height: 5, borderRadius: '50%', background: node?.color, display: 'inline-block' }} />
+                    {node?.label ?? n}
+                  </span>;
+                })}
+              </span>
+            )}
             <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
               <div style={{ width: 6, height: 6, borderRadius: '50%', background: NODES.find(n => n.id === tab.result!.node)?.color }} />
               <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>{tab.result.nodeInfo.name}</span>
             </div>
           </div>
+
           <div style={{ flex: 1, overflow: 'auto' }}>
             <ResultTable result={tab.result} />
           </div>
@@ -564,12 +706,28 @@ function QueryPane({
 }
 
 // ─── Main page ─────────────────────────────────────────────────────────────
-let tabCounter = 1;
+// tabCounter starts at 2 because INITIAL_TAB already uses "Query 1"
+let tabCounter = 2;
+
+const INITIAL_SQL = "SELECT IDNV, TENNV, GIOITINH, EMAIL, DIENTHOAI\nFROM NHANVIEN\nWHERE IsDeleted = 0 OR IsDeleted IS NULL\nORDER BY TENNV\nLIMIT 20;\n-- LƯU Ý: SQLite/Turso dùng LIMIT thay cho SELECT TOP N";
+
+// Stable initial tab — fixed ID so SSR and client render the same HTML (no hydration mismatch)
+const INITIAL_TAB: TabState = {
+  id: 'tab-initial-1',
+  sql: INITIAL_SQL,
+  node: 'master',
+  result: null,
+  error: null,
+  execTime: null,
+  loading: false,
+  label: 'Query 1',
+  paneId: 0,
+};
 
 function makeTab(node: NodeId = 'master', sql = '', paneId = 0): TabState {
   return {
     id: `tab-${Date.now()}-${tabCounter++}`,
-    sql: sql || "SELECT TOP 20\n  IDNV, TENNV, GIOITINH, EMAIL, DIENTHOAI\nFROM NhanVien\nORDER BY TENNV",
+    sql: sql || INITIAL_SQL,
     node,
     result: null,
     error: null,
@@ -581,16 +739,47 @@ function makeTab(node: NodeId = 'master', sql = '', paneId = 0): TabState {
 }
 
 
+
 import { MoreVertical } from 'lucide-react';
 
+// ─── Restore tab state from sessionStorage ───────────────────────────────
+function loadTabsFromSession(): { tabs: TabState[]; activeIds: { 0: string | null; 1: string | null } } | null {
+  try {
+    if (typeof window === 'undefined') return null;
+    const raw = sessionStorage.getItem(SESSION_TABS_KEY);
+    if (!raw) return null;
+    const saved = JSON.parse(raw);
+    if (!Array.isArray(saved.tabs) || saved.tabs.length === 0) return null;
+    // Restore: strip transient state (loading/result/error)
+    const tabs: TabState[] = saved.tabs.map((t: any) => ({
+      id: t.id,
+      sql: t.sql || '',
+      node: t.node || 'master',
+      label: t.label || 'Query',
+      paneId: t.paneId ?? 0,
+      result: null,
+      error: null,
+      execTime: null,
+      loading: false,
+    }));
+    return { tabs, activeIds: saved.activeIds };
+  } catch {
+    return null;
+  }
+}
+
 export default function SqlTerminalPage() {
-  const [tabs, setTabs] = useState<TabState[]>([makeTab(undefined, undefined, 0)]);
-  const [activeIds, setActiveIds] = useState<{ 0: string | null; 1: string | null }>({ 0: tabs[0].id, 1: null });
+  // Always initialize with INITIAL_TAB so SSR and client render the same HTML
+  // (no hydration mismatch). sessionStorage is restored in useEffect after mount.
+  const [tabs, setTabs] = useState<TabState[]>([INITIAL_TAB]);
+  const [activeIds, setActiveIds] = useState<{ 0: string | null; 1: string | null }>({ 0: INITIAL_TAB.id, 1: null });
   const [schemaNode, setSchemaNode] = useState<NodeId>('master');
   
   const [showExamples, setShowExamples] = useState(false);
   const [showDocs, setShowDocs] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showDummy, setShowDummy] = useState(false);
+  const [isExplorerOpen, setIsExplorerOpen] = useState(true);
   const [history, setHistory] = useState<{ sql: string; node: NodeId; time: string }[]>([]);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
@@ -630,7 +819,24 @@ export default function SqlTerminalPage() {
 
   useEffect(() => {
     try { const s = localStorage.getItem(HISTORY_KEY); if (s) setHistory(JSON.parse(s)); } catch {}
+    // Restore tabs from sessionStorage AFTER mount (client-only, avoids hydration mismatch)
+    const fromSession = loadTabsFromSession();
+    if (fromSession) {
+      setTabs(fromSession.tabs);
+      setActiveIds(fromSession.activeIds);
+    }
   }, []);
+
+  // Persist tabs to sessionStorage whenever they change (exclude result/error to keep it light)
+  useEffect(() => {
+    try {
+      const toSave = {
+        tabs: tabs.map(t => ({ id: t.id, sql: t.sql, node: t.node, label: t.label, paneId: t.paneId })),
+        activeIds,
+      };
+      sessionStorage.setItem(SESSION_TABS_KEY, JSON.stringify(toSave));
+    } catch {}
+  }, [tabs, activeIds]);
 
   useEffect(() => {
     const handleClick = () => setMenuOpenId(null);
@@ -801,16 +1007,69 @@ export default function SqlTerminalPage() {
   const hasPane1 = tabs.some(t => t.paneId === 1);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px)', overflow: 'hidden', gap: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', gap: 0 }}>
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', borderBottom: '1px solid rgba(255,255,255,0.08)', flexShrink: 0, flexWrap: 'wrap' }}>
+        <button 
+          onClick={() => setIsExplorerOpen(!isExplorerOpen)} 
+          title={isExplorerOpen ? 'Thu gọn Database Explorer' : 'Mở Database Explorer'}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 30, height: 30, borderRadius: 6, border: '1px solid rgba(255,255,255,0.12)',
+            background: isExplorerOpen ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.05)',
+            color: isExplorerOpen ? '#a5b4fc' : 'rgba(255,255,255,0.5)',
+            cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0, fontSize: 14, fontWeight: 700,
+          }}
+        >
+          {isExplorerOpen ? '\u2039' : '\u203a'}
+        </button>
         <Database size={20} className="text-indigo-400" />
         <span style={{ fontWeight: 700, fontSize: 18, color: 'white' }}>SQL Terminal</span>
-        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }}>— Phân tán 4 nodes</span>
+        <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 13 }} className="hidden md:inline-block">— Phân tán 4 nodes</span>
         <div style={{ flex: 1 }} />
         {/* Buttons */}
         <div style={{ position: 'relative' }}>
-          <button onClick={() => { setShowExamples(!showExamples); setShowDocs(false); setShowHistory(false); }} className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 16px' }}>
+          <button onClick={() => { setShowDummy(!showDummy); setShowExamples(false); setShowDocs(false); setShowHistory(false); }} className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 16px', color: '#fbbf24', borderColor: '#d9770640' }}>
+            <Zap size={15} /> DUMMY
+          </button>
+          {showDummy && (
+            <div style={{ position: 'absolute', zIndex: 100, right: 0, top: '100%', marginTop: 4, width: 260, background: '#1e293b', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, boxShadow: '0 20px 60px rgba(0,0,0,0.5)', overflow: 'hidden' }}>
+              <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 700, textTransform: 'uppercase' }}>Sinh dữ liệu giả — phân tán đúng node</div>
+              {/* NHANVIEN: creates 3 tabs, one per branch node */}
+              <button
+                onClick={() => {
+                  const branches: Array<{ cn: 'CN1'|'CN2'|'CN3'; node: NodeId }> = [
+                    { cn: 'CN1', node: 'cn1' },
+                    { cn: 'CN2', node: 'cn2' },
+                    { cn: 'CN3', node: 'cn3' },
+                  ];
+                  branches.forEach(({ cn, node }) => {
+                    addTab(generateDummySqlForBranch('NHANVIEN', cn), node as NodeId, 0);
+                  });
+                  setShowDummy(false);
+                }}
+                style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.65)', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+              >
+                <span style={{ color: '#fbbf24', fontWeight: 600 }}>Bảng NHANVIEN</span>
+                <span style={{ fontSize: 10, marginLeft: 6, color: 'rgba(255,255,255,0.35)' }}>→ 3 tabs (CN1/CN2/CN3)</span>
+              </button>
+              {['BANGCHAMCONG', 'BANGLUONG'].map((t) => (
+                <button key={t} onClick={() => { addTab(generateDummySql(t), undefined, 0); setShowDummy(false); }}
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.65)', fontSize: 13, cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                >Bảng {t}</button>
+              ))}
+              <div style={{ padding: '7px 12px', fontSize: 10, color: 'rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                ⚡ NHANVIEN tự động gửi đúng node phân tán
+              </div>
+            </div>
+          )}
+        </div>
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => { setShowExamples(!showExamples); setShowDocs(false); setShowHistory(false); setShowDummy(false); }} className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 16px' }}>
             <Lightbulb size={15} /> Ví dụ
           </button>
           {showExamples && (
@@ -827,7 +1086,7 @@ export default function SqlTerminalPage() {
           )}
         </div>
         <div style={{ position: 'relative' }}>
-          <button onClick={() => { setShowDocs(!showDocs); setShowExamples(false); setShowHistory(false); }} className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 16px' }}>
+          <button onClick={() => { setShowDocs(!showDocs); setShowExamples(false); setShowHistory(false); setShowDummy(false); }} className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 16px' }}>
             <BookOpen size={15} /> Docs
           </button>
           {showDocs && (
@@ -843,7 +1102,7 @@ export default function SqlTerminalPage() {
           )}
         </div>
         <div style={{ position: 'relative' }}>
-          <button onClick={() => { setShowHistory(!showHistory); setShowExamples(false); setShowDocs(false); }} className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 16px' }}>
+          <button onClick={() => { setShowHistory(!showHistory); setShowExamples(false); setShowDocs(false); setShowDummy(false); }} className="btn btn-secondary" style={{ fontSize: 13, padding: '8px 16px' }}>
             <History size={15} /> Lịch sử {history.length > 0 && <span style={{ color: '#818cf8', marginLeft: 3 }}>{history.length}</span>}
           </button>
           {showHistory && (
@@ -874,24 +1133,56 @@ export default function SqlTerminalPage() {
       </div>
 
       {/* Body: schema + tabs */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0, position: 'relative' }}>
         {/* Schema left panel */}
-        <div style={{ width: sidebarWidth, flexShrink: 0, overflowY: 'auto', overflowX: 'hidden' }}>
-          <SchemaPanel
-            nodeId={schemaNode}
-            onInsertTable={name => {
-              const r = activeIds[0] ? 0 : 1;
-              const tab = tabs.find(t => t.id === activeIds[r]);
-              if (tab) updateTab(tab.id, { sql: (tab.sql ? tab.sql + '\n' : '') + name });
-            }}
-            onPreviewTable={name => addAndRunTab(`SELECT * FROM ${name}`, undefined, tabs.some(t=>t.paneId===1) ? 1 : 0)}
-          />
-        </div>
+        {/* Desktop: relative panel (takes space). Mobile: absolute overlay with backdrop */}
         <div
-          onMouseDown={startDragSidebar}
-          style={{ width: 4, flexShrink: 0, cursor: 'col-resize', background: 'rgba(255,255,255,0.08)' }}
-          className="hover:bg-indigo-500/20 transition-colors"
-        />
+          style={{ width: isExplorerOpen ? sidebarWidth : 0, flexShrink: 0, overflow: 'hidden', transition: 'width 0.2s cubic-bezier(0.4,0,0.2,1)' }}
+          className="hidden md:block h-full border-r border-white/10"
+        >
+          <div style={{ width: sidebarWidth, height: '100%', overflowY: 'auto', overflowX: 'hidden' }}>
+            <SchemaPanel
+              nodeId={schemaNode}
+              onInsertTable={name => {
+                const r = activeIds[0] ? 0 : 1;
+                const tab = tabs.find(t => t.id === activeIds[r]);
+                if (tab) updateTab(tab.id, { sql: (tab.sql ? tab.sql + '\n' : '') + name });
+              }}
+              onPreviewTable={name => {
+                addAndRunTab(`SELECT * FROM ${name}`, undefined, tabs.some(t=>t.paneId===1) ? 1 : 0);
+              }}
+            />
+          </div>
+        </div>
+        {/* Desktop resize handle */}
+        {isExplorerOpen && (
+          <div
+            onMouseDown={startDragSidebar}
+            style={{ width: 4, flexShrink: 0, cursor: 'col-resize', background: 'rgba(255,255,255,0.08)' }}
+            className="hover:bg-indigo-500/20 transition-colors hidden md:block"
+          />
+        )}
+        {/* Mobile: absolute overlay */}
+        {isExplorerOpen && (
+          <>
+            <div style={{ width: sidebarWidth, flexShrink: 0, overflowY: 'auto', overflowX: 'hidden' }} className="md:hidden absolute inset-y-0 left-0 bg-[#0f172a] z-50 h-full border-r border-white/10 shadow-xl">
+              <SchemaPanel
+                nodeId={schemaNode}
+                onInsertTable={name => {
+                  const r = activeIds[0] ? 0 : 1;
+                  const tab = tabs.find(t => t.id === activeIds[r]);
+                  if (tab) updateTab(tab.id, { sql: (tab.sql ? tab.sql + '\n' : '') + name });
+                  setIsExplorerOpen(false);
+                }}
+                onPreviewTable={name => {
+                  addAndRunTab(`SELECT * FROM ${name}`, undefined, tabs.some(t=>t.paneId===1) ? 1 : 0);
+                  setIsExplorerOpen(false);
+                }}
+              />
+            </div>
+            <div className="md:hidden fixed inset-0 z-40 bg-black/50" onClick={() => setIsExplorerOpen(false)}></div>
+          </>
+        )}
 
         {/* Right: panegroups layout */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden', minWidth: 0 }}>

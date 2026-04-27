@@ -16,11 +16,11 @@ function Shell({ children }: { children: ReactNode }) {
     <>
       <Sidebar />
       <div
-        className={cn('min-h-screen flex flex-col content-transition')}
+        className={cn('h-screen flex flex-col content-transition overflow-hidden')}
         style={{ marginLeft: sidebarWidth }}
       >
         <ServerStatusBar />
-        <main className={cn('flex-1', isFullBleed ? 'overflow-hidden' : 'p-6')}>{children}</main>
+        <main className={cn('flex-1 min-h-0', isFullBleed ? 'overflow-hidden' : 'overflow-auto p-6')}>{children}</main>
       </div>
     </>
   );

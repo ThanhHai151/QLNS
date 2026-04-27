@@ -3,6 +3,11 @@ import * as svc from '../services/distributed.service';
 import type { CreateEmployeeDto, UpdateEmployeeDto } from '../types';
 
 export async function employeeRoutes(app: FastifyInstance) {
+  // Allow empty body for DELETE requests
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+    if (!body || (body as string).trim() === '') { done(null, {}); return; }
+    try { done(null, JSON.parse(body as string)); } catch (err) { done(err as Error, undefined); }
+  });
   // GET /api/employees?branch=CN1
   app.get<{ Querystring: { branch?: string } }>('/', async (req, reply) => {
     const start = Date.now();

@@ -54,6 +54,12 @@ export async function contractRoutes(app: FastifyInstance) {
 }
 
 export async function recruitmentRoutes(app: FastifyInstance) {
+  // Allow empty body for DELETE requests
+  app.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
+    if (!body || (body as string).trim() === '') { done(null, {}); return; }
+    try { done(null, JSON.parse(body as string)); } catch (err) { done(err as Error, undefined); }
+  });
+
   app.get<{ Querystring: { branch?: string } }>('/', async (req, reply) => {
     const start = Date.now();
     try {

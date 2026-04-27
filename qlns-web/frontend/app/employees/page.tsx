@@ -229,7 +229,7 @@ export default function EmployeesPage() {
   ];
 
   return (
-    <div className="space-y-5">
+    <div className="h-full flex flex-col gap-5">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -270,7 +270,7 @@ export default function EmployeesPage() {
       </div>
 
       {/* Table */}
-      <div className="w-full">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {isLoading ? (
           <div className="glass flex items-center justify-center h-40">
             <Loader2 className="h-6 w-6 animate-spin text-indigo-400" />

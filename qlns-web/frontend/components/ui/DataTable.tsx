@@ -23,7 +23,7 @@ export interface DataTableProps<T> {
 export function DataTable<T extends Record<string, any>>({
   columns,
   data,
-  maxHeight = '650px',
+  maxHeight = '100%',
   globalSearch = '',
   className,
 }: DataTableProps<T>) {
@@ -95,9 +95,9 @@ export function DataTable<T extends Record<string, any>>({
   };
 
   return (
-    <div className={cn("glass overflow-hidden flex flex-col w-full", className)}>
+    <div className={cn("glass overflow-hidden flex flex-col w-full h-full min-h-0", className)}>
       {/* Wrapper to control overall table scrolling while fixing the header */}
-      <div className="overflow-auto w-full custom-scrollbar" style={{ maxHeight }}>
+      <div className="overflow-auto w-full flex-1 min-h-0 custom-scrollbar">
         <table className="data-table w-full relative">
           <thead className="sticky top-0 bg-slate-900/95 backdrop-blur-md z-10 shadow-sm border-b border-white/10">
             <tr>

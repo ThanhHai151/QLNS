@@ -49,30 +49,44 @@ async function queryAllBranches<T>(
 // ============================================================
 // EMPLOYEES SERVICE
 // ============================================================
+// Maps nodeId -> CHINHANH code stored in DB
+const NODE_TO_CHINHANH: Record<string, string> = {
+  cn1: 'CN1',
+  cn2: 'CN2',
+  cn3: 'CN3',
+};
+
 export async function getAllEmployees(
   filterBranch?: string
 ): Promise<{ data: Employee[]; sourceNodes: NodeId[] }> {
-  const baseQuery = `
-    SELECT nv.*, cv.TENCV AS TEN_CHUCVU, td.TENTD AS TEN_TRINHDO,
-           td.CHUYENNGANH, pb.TENPB AS TEN_PHONGBAN, cn.TENCNHANH AS TEN_CHINHANH
-    FROM NHANVIEN nv
-    LEFT JOIN CHUCVU cv ON nv.CHUCVU = cv.IDCV
-    LEFT JOIN TRINHDO td ON nv.TRINHDO = td.IDTD
-    LEFT JOIN PHONGBAN pb ON nv.PHONGBAN = pb.IDPB
-    LEFT JOIN CHINHANH cn ON nv.CHINHANH = cn.IDCN
-    WHERE nv.IsDeleted = 0 OR nv.IsDeleted IS NULL
-  `;
+  // Each node only stores its own branch employees.
+  // We query each branch node with a WHERE clause to only return that branch's data.
+  // This correctly demonstrates distributed fragmentation by CHINHANH.
+  const buildQuery = (chinhanh: string) => ({
+    sql: `
+      SELECT nv.*, cv.TENCV AS TEN_CHUCVU, td.TENTD AS TEN_TRINHDO,
+             td.CHUYENNGANH, pb.TENPB AS TEN_PHONGBAN, cn.TENCNHANH AS TEN_CHINHANH
+      FROM NHANVIEN nv
+      LEFT JOIN CHUCVU cv ON nv.CHUCVU = cv.IDCV
+      LEFT JOIN TRINHDO td ON nv.TRINHDO = td.IDTD
+      LEFT JOIN PHONGBAN pb ON nv.PHONGBAN = pb.IDPB
+      LEFT JOIN CHINHANH cn ON nv.CHINHANH = cn.IDCN
+      WHERE nv.CHINHANH = ? AND (nv.IsDeleted = 0 OR nv.IsDeleted IS NULL)
+    `,
+    args: [chinhanh],
+  });
 
   if (filterBranch) {
+    // normalize: 'CN1' / 'cn1' / 'hanoi' all work
     const nodeId = db.getNodeForBranch(filterBranch);
-    const result = await queryNode<Employee>(nodeId, (client) => client.execute(baseQuery));
-    return { data: result.rows.map(r => ({ ...r, _sourceNode: result.nodeId })), sourceNodes: [nodeId] };
+    const chinhanh = NODE_TO_CHINHANH[nodeId] ?? filterBranch.toUpperCase();
+    const result = await queryNode<Employee>(nodeId, (client) => client.execute(buildQuery(chinhanh)));
+    return { data: result.rows.map(r => ({ ...r, _sourceNode: nodeId })), sourceNodes: [nodeId] };
   }
 
-  // Linked server is not supported natively in Sqlite/Turso across regions in one query like MSSQL.
-  // We use direct mode for anything across nodes.
+  // Global query: fan out to each branch node, each returns only its own data
   const { rows, sourceNodes } = await queryAllBranches<Employee>(
-    (client) => client.execute(baseQuery)
+    (client, nodeId) => client.execute(buildQuery(NODE_TO_CHINHANH[nodeId] ?? 'CN1'))
   );
   return { data: rows, sourceNodes };
 }
@@ -80,22 +94,24 @@ export async function getAllEmployees(
 export async function getEmployeeById(
   idnv: string
 ): Promise<{ data: Employee | null; sourceNode: NodeId | null }> {
+  // Determine which node to query by IDNV prefix or search all branch nodes
   const branches = db.getAllBranchNodeIds();
+  const SQL = `
+    SELECT nv.*, cv.TENCV AS TEN_CHUCVU, td.TENTD AS TEN_TRINHDO,
+           td.CHUYENNGANH, pb.TENPB AS TEN_PHONGBAN, cn.TENCNHANH AS TEN_CHINHANH
+    FROM NHANVIEN nv
+    LEFT JOIN CHUCVU cv ON nv.CHUCVU = cv.IDCV
+    LEFT JOIN TRINHDO td ON nv.TRINHDO = td.IDTD
+    LEFT JOIN PHONGBAN pb ON nv.PHONGBAN = pb.IDPB
+    LEFT JOIN CHINHANH cn ON nv.CHINHANH = cn.IDCN
+    WHERE nv.IDNV = ? AND (nv.IsDeleted = 0 OR nv.IsDeleted IS NULL)
+  `;
   for (const nodeId of branches) {
+    const chinhanh = NODE_TO_CHINHANH[nodeId];
+    // Optimization: skip node if IDNV prefix doesn't match this branch's data
+    // e.g. NC1XXXXX belongs to CN1, NC2XXXXX to CN2 — but we search all to be safe
     const result = await queryNode<Employee>(nodeId, (client) =>
-      client.execute({
-        sql: `
-          SELECT nv.*, cv.TENCV AS TEN_CHUCVU, td.TENTD AS TEN_TRINHDO,
-                 td.CHUYENNGANH, pb.TENPB AS TEN_PHONGBAN, cn.TENCNHANH AS TEN_CHINHANH
-          FROM NHANVIEN nv
-          LEFT JOIN CHUCVU cv ON nv.CHUCVU = cv.IDCV
-          LEFT JOIN TRINHDO td ON nv.TRINHDO = td.IDTD
-          LEFT JOIN PHONGBAN pb ON nv.PHONGBAN = pb.IDPB
-          LEFT JOIN CHINHANH cn ON nv.CHINHANH = cn.IDCN
-          WHERE nv.IDNV = ? AND (nv.IsDeleted = 0 OR nv.IsDeleted IS NULL)
-        `,
-        args: [idnv]
-      })
+      client.execute({ sql: SQL, args: [idnv] })
     );
     if (result.success && result.rows.length > 0) {
       return { data: { ...result.rows[0], _sourceNode: nodeId as NodeId }, sourceNode: nodeId };
@@ -209,29 +225,28 @@ export async function deleteEmployee(idnv: string): Promise<{ sourceNodes: NodeI
 export async function getSalaries(
   filterBranch?: string, thang?: number, nam?: number
 ): Promise<{ data: Salary[]; sourceNodes: NodeId[] }> {
-  const buildQuery = (hasDateFilter: boolean) => `
-    SELECT bl.*, bc.IDNV, bc.THANG, bc.NAM, nv.TENNV, nv.CHINHANH
-    FROM BANGLUONG bl
-    JOIN BANGCHAMCONG bc ON bl.IDBC = bc.IDBC
-    JOIN NHANVIEN nv ON bc.IDNV = nv.IDNV
-    WHERE (nv.IsDeleted = 0 OR nv.IsDeleted IS NULL)
-    ${hasDateFilter ? 'AND bc.THANG = ? AND bc.NAM = ?' : ''}
-  `;
-
-  const runQuery = (client: Client) => {
-    if (thang && nam) {
-        return client.execute({ sql: buildQuery(true), args: [thang, nam] });
-    }
-    return client.execute(buildQuery(false));
-  };
+  const buildQuery = (chinhanh: string, hasDateFilter: boolean) => ({
+    sql: `
+      SELECT bl.*, bc.IDNV, bc.THANG, bc.NAM, nv.TENNV, nv.CHINHANH
+      FROM BANGLUONG bl
+      JOIN BANGCHAMCONG bc ON bl.IDBC = bc.IDBC
+      JOIN NHANVIEN nv ON bc.IDNV = nv.IDNV
+      WHERE nv.CHINHANH = ? AND (nv.IsDeleted = 0 OR nv.IsDeleted IS NULL)
+      ${hasDateFilter ? 'AND bc.THANG = ? AND bc.NAM = ?' : ''}
+    `,
+    args: hasDateFilter ? [chinhanh, thang ?? null, nam ?? null] : [chinhanh],
+  });
 
   if (filterBranch) {
     const nodeId = db.getNodeForBranch(filterBranch);
-    const result = await queryNode<Salary>(nodeId, runQuery);
+    const chinhanh = NODE_TO_CHINHANH[nodeId] ?? filterBranch.toUpperCase();
+    const result = await queryNode<Salary>(nodeId, (client) => client.execute(buildQuery(chinhanh, !!(thang && nam))));
     return { data: result.rows.map(r => ({ ...r, _sourceNode: nodeId as NodeId })), sourceNodes: [nodeId] };
   }
 
-  const { rows, sourceNodes } = await queryAllBranches<Salary>((client) => runQuery(client));
+  const { rows, sourceNodes } = await queryAllBranches<Salary>(
+    (client, nodeId) => client.execute(buildQuery(NODE_TO_CHINHANH[nodeId] ?? 'CN1', !!(thang && nam)))
+  );
   return { data: rows, sourceNodes };
 }
 
@@ -241,28 +256,27 @@ export async function getSalaries(
 export async function getAttendance(
   filterBranch?: string, thang?: number, nam?: number
 ): Promise<{ data: Attendance[]; sourceNodes: NodeId[] }> {
-  const buildQuery = (hasFilter: boolean) => `
-    SELECT bc.*, nv.TENNV, nv.CHINHANH
-    FROM BANGCHAMCONG bc
-    JOIN NHANVIEN nv ON bc.IDNV = nv.IDNV
-    WHERE (nv.IsDeleted = 0 OR nv.IsDeleted IS NULL)
-    ${hasFilter ? 'AND bc.THANG = ? AND bc.NAM = ?' : ''}
-  `;
-
-  const runQuery = (client: Client) => {
-    if (thang && nam) {
-      return client.execute({ sql: buildQuery(true), args: [thang, nam] });
-    }
-    return client.execute(buildQuery(false));
-  };
+  const buildQuery = (chinhanh: string, hasFilter: boolean) => ({
+    sql: `
+      SELECT bc.*, nv.TENNV, nv.CHINHANH
+      FROM BANGCHAMCONG bc
+      JOIN NHANVIEN nv ON bc.IDNV = nv.IDNV
+      WHERE nv.CHINHANH = ? AND (nv.IsDeleted = 0 OR nv.IsDeleted IS NULL)
+      ${hasFilter ? 'AND bc.THANG = ? AND bc.NAM = ?' : ''}
+    `,
+    args: hasFilter ? [chinhanh, thang ?? null, nam ?? null] : [chinhanh],
+  });
 
   if (filterBranch) {
     const nodeId = db.getNodeForBranch(filterBranch);
-    const result = await queryNode<Attendance>(nodeId, runQuery);
+    const chinhanh = NODE_TO_CHINHANH[nodeId] ?? filterBranch.toUpperCase();
+    const result = await queryNode<Attendance>(nodeId, (client) => client.execute(buildQuery(chinhanh, !!(thang && nam))));
     return { data: result.rows.map(r => ({ ...r, _sourceNode: nodeId as NodeId })), sourceNodes: [nodeId] };
   }
 
-  const { rows, sourceNodes } = await queryAllBranches<Attendance>((client) => runQuery(client));
+  const { rows, sourceNodes } = await queryAllBranches<Attendance>(
+    (client, nodeId) => client.execute(buildQuery(NODE_TO_CHINHANH[nodeId] ?? 'CN1', !!(thang && nam)))
+  );
   return { data: rows, sourceNodes };
 }
 
@@ -270,21 +284,27 @@ export async function getAttendance(
 // CONTRACTS SERVICE
 // ============================================================
 export async function getContracts(filterBranch?: string): Promise<{ data: Contract[]; sourceNodes: NodeId[] }> {
-  const query = `
-    SELECT hd.*, lhd.TENLOAI AS TEN_LOAIHD, nv.TENNV, nv.CHINHANH
-    FROM HOPDONG hd
-    JOIN LOAIHD lhd ON hd.LOAIHD = lhd.IDLOAI
-    JOIN NHANVIEN nv ON hd.IDNV = nv.IDNV
-    WHERE (nv.IsDeleted = 0 OR nv.IsDeleted IS NULL)
-  `;
+  const buildQuery = (chinhanh: string) => ({
+    sql: `
+      SELECT hd.*, lhd.TENLOAI AS TEN_LOAIHD, nv.TENNV, nv.CHINHANH
+      FROM HOPDONG hd
+      JOIN LOAIHD lhd ON hd.LOAIHD = lhd.IDLOAI
+      JOIN NHANVIEN nv ON hd.IDNV = nv.IDNV
+      WHERE nv.CHINHANH = ? AND (nv.IsDeleted = 0 OR nv.IsDeleted IS NULL)
+    `,
+    args: [chinhanh],
+  });
 
   if (filterBranch) {
     const nodeId = db.getNodeForBranch(filterBranch);
-    const result = await queryNode<Contract>(nodeId, (client) => client.execute(query));
+    const chinhanh = NODE_TO_CHINHANH[nodeId] ?? filterBranch.toUpperCase();
+    const result = await queryNode<Contract>(nodeId, (client) => client.execute(buildQuery(chinhanh)));
     return { data: result.rows.map(r => ({ ...r, _sourceNode: nodeId as NodeId })), sourceNodes: [nodeId] };
   }
 
-  const { rows, sourceNodes } = await queryAllBranches<Contract>((client) => client.execute(query));
+  const { rows, sourceNodes } = await queryAllBranches<Contract>(
+    (client, nodeId) => client.execute(buildQuery(NODE_TO_CHINHANH[nodeId] ?? 'CN1'))
+  );
   return { data: rows, sourceNodes };
 }
 
@@ -292,20 +312,26 @@ export async function getContracts(filterBranch?: string): Promise<{ data: Contr
 // RECRUITMENT SERVICE
 // ============================================================
 export async function getRecruitments(filterBranch?: string): Promise<{ data: Recruitment[]; sourceNodes: NodeId[] }> {
-  const query = `
-    SELECT td.*, cn.TENCNHANH AS TEN_CHINHANH
-    FROM TUYENDUNG td
-    LEFT JOIN CHINHANH cn ON td.IDCN = cn.IDCN
-    WHERE (td.IsDeleted = 0 OR td.IsDeleted IS NULL)
-  `;
+  const buildQuery = (chinhanh: string) => ({
+    sql: `
+      SELECT td.*, cn.TENCNHANH AS TEN_CHINHANH
+      FROM TUYENDUNG td
+      LEFT JOIN CHINHANH cn ON td.IDCN = cn.IDCN
+      WHERE td.IDCN = ? AND (td.IsDeleted = 0 OR td.IsDeleted IS NULL)
+    `,
+    args: [chinhanh],
+  });
 
   if (filterBranch) {
     const nodeId = db.getNodeForBranch(filterBranch);
-    const result = await queryNode<Recruitment>(nodeId, (client) => client.execute(query));
+    const chinhanh = NODE_TO_CHINHANH[nodeId] ?? filterBranch.toUpperCase();
+    const result = await queryNode<Recruitment>(nodeId, (client) => client.execute(buildQuery(chinhanh)));
     return { data: result.rows.map(r => ({ ...r, _sourceNode: nodeId as NodeId })), sourceNodes: [nodeId] };
   }
 
-  const { rows, sourceNodes } = await queryAllBranches<Recruitment>((client) => client.execute(query));
+  const { rows, sourceNodes } = await queryAllBranches<Recruitment>(
+    (client, nodeId) => client.execute(buildQuery(NODE_TO_CHINHANH[nodeId] ?? 'CN1'))
+  );
   return { data: rows, sourceNodes };
 }
 
@@ -426,9 +452,14 @@ export async function deleteRecruitment(matd: string): Promise<{ sourceNodes: No
 export async function getGlobalStats(): Promise<{ data: GlobalStats; sourceNodes: NodeId[] }> {
   const branches = db.getAllBranchNodeIds();
   
+  // Each node counts ONLY its own branch employees
   const statsPromises = branches.map(async (nodeId) => {
+    const chinhanh = NODE_TO_CHINHANH[nodeId] ?? 'CN1';
     const result = await queryNode<{ branch: string; count: number }>(nodeId, (client) =>
-      client.execute(`SELECT CHINHANH AS branch, COUNT(*) AS count FROM NHANVIEN WHERE IsDeleted = 0 OR IsDeleted IS NULL GROUP BY CHINHANH LIMIT 1`)
+      client.execute({
+        sql: `SELECT CHINHANH AS branch, COUNT(*) AS count FROM NHANVIEN WHERE CHINHANH = ? AND (IsDeleted = 0 OR IsDeleted IS NULL) GROUP BY CHINHANH LIMIT 1`,
+        args: [chinhanh],
+      })
     );
     return { nodeId, rows: result.rows, success: result.success };
   });
@@ -461,14 +492,15 @@ export async function getGlobalStats(): Promise<{ data: GlobalStats; sourceNodes
   const openRecruitments = recruitRes.rows.reduce((a, r) => a + (r.openRecruitments || 0), 0);
 
   const byBranch = countResults
-    .filter(r => r.success && r.rows[0])
+    .filter(r => r.success)
     .map(r => {
-      const bn = r.rows[0].branch ? String(r.rows[0].branch).trim() : 'Unknown';
       const nodeInfo = db.nodes[r.nodeId as any];
+      const chinhanh = NODE_TO_CHINHANH[r.nodeId] ?? 'Unknown';
+      const count = r.rows[0]?.count || 0;
       return {
-        branch: bn,
+        branch: chinhanh,
         city: nodeInfo?.city || '',
-        count: r.rows[0].count,
+        count,
         nodeId: r.nodeId,
       };
     });

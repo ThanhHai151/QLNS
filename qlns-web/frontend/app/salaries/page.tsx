@@ -37,7 +37,7 @@ export default function SalariesPage() {
   ];
 
   return (
-    <div className="space-y-5 h-full flex flex-col">
+    <div className="h-full flex flex-col gap-5">
       <div className="flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
@@ -83,7 +83,7 @@ export default function SalariesPage() {
       </div>
 
       {/* Table */}
-      <div className="flex-1 overflow-hidden min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {isLoading ? (
           <div className="flex justify-center h-40 items-center"><Loader2 className="h-6 w-6 animate-spin text-green-400" /></div>
         ) : (
@@ -91,7 +91,6 @@ export default function SalariesPage() {
             columns={columns} 
             data={salaries} 
             globalSearch={search}
-            maxHeight="calc(100vh - 270px)" 
           />
         )}
       </div>
