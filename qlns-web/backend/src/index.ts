@@ -34,7 +34,7 @@ async function bootstrap() {
   // ── Security & CORS ────────────────────────────────────────
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, {
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true,
   });
