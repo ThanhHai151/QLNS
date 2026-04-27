@@ -1,0 +1,34 @@
+{
+  "master": {
+    "id": "master",
+    "name": "Server Gốc (Master)",
+    "branch": "ALL",
+    "city": "Tất cả chi nhánh",
+    "url": "libsql://qlns-master-thanhhai151.aws-ap-south-1.turso.io",
+    "authToken": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzcyNzA4MDQsImlkIjoiMDE5ZGNkOTgtNDMwMS03YmU0LWFhN2ItM2I3YTg1MmYwMjNlIiwicmlkIjoiMjE0NzU2MzktZTFmOC00YWQxLWI4OGEtN2IyMjgwMDMwOWQ0In0.K5qmDYvFs225T3AufLjjfIZPb7_Inl-hONNBIjbvcTbYBLO3IIBz-ePOPPe7wYmv-_zKa8XbJ_oKoApP5hL6AQ"
+  },
+  "cn1": {
+    "id": "cn1",
+    "name": "Chi nhánh Hà Nội",
+    "branch": "hanoi",
+    "city": "Hà Nội",
+    "url": "libsql://qlns-hanoi-thanhhai151.aws-ap-south-1.turso.io",
+    "authToken": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzcyNzA4MDksImlkIjoiMDE5ZGNkOTgtNTUwMS03ZTA1LTkzOWQtMmQzMjI5OTBhZDAwIiwicmlkIjoiYjk2NjcxYmUtMjRlNS00MjE3LWIxOTYtM2UwMzkzMWFjZmI4In0.1XM_wqpE16rg__r4m5xB5zPIlacsUYtsHMHpX__pkrXc5f2fXX9VXFQspvF1_0hNWpI8WVuPDmFckk2DDQpaDw"
+  },
+  "cn2": {
+    "id": "cn2",
+    "name": "Chi nhánh Đà Nẵng",
+    "branch": "danang",
+    "city": "Đà Nẵng",
+    "url": "libsql://qlns-danang-thanhhai151.aws-ap-south-1.turso.io",
+    "authToken": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzcyNzA4MTQsImlkIjoiMDE5ZGNkOTgtNjkwMS03ZWQyLWFmZWItZjliMGNhNjJlZjRhIiwicmlkIjoiZWZlYmM1MDEtY2Y2OC00MWY1LWEzNjktOTQ4MDk3ZTk3MTExIn0.gIl7Z-bDRNQXw-Ov9ZIURNxg_5LumFgbQw2nfKi9DsA35uF1U7ZFaPM929rwPBhFuMeKhxG6P6U7_1s6DazwCA"
+  },
+  "cn3": {
+    "id": "cn3",
+    "name": "Chi nhánh TP.HCM",
+    "branch": "hcm",
+    "city": "TP. Hồ Chí Minh",
+    "url": "libsql://qlns-hcm-thanhhai151.aws-ap-south-1.turso.io",
+    "authToken": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9.eyJpYXQiOjE3NzcyNzA4MTksImlkIjoiMDE5ZGNkOTgtN2QwMS03YzZkLTliNjEtOGZkNzVlY2U1MjRmIiwicmlkIjoiM2M1NjY0ZjQtMDVhZS00ODRlLWIyOWYtZDc0NWFkZWRhNjMzIn0.7Fut8jLkaCJHbtG47L6B-yUGy9f-sfpgikuWMXKqAw4FGYKTjdSiALodAfY5OwLFqzxvQnn_56860vB0Nm6iDA"
+  }
+}
