@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from './providers';
-import { LayoutShell } from '@/components/layout/LayoutShell';
+import { AppShell } from '@/components/layout/AppShell';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="vi" className={inter.variable}>
       <body className="min-h-screen bg-slate-950 text-white antialiased">
         <Providers>
-          <LayoutShell>{children}</LayoutShell>
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>

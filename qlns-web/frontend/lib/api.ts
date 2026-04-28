@@ -11,6 +11,27 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// ── Auto-inject branch filter for branch accounts ──────────
+// Reads the stored auth user from localStorage and appends
+// ?branch=CN1/CN2/CN3 to GET requests automatically so every
+// data fetch is transparently scoped to the user's branch.
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('qlns_auth_user');
+      if (stored) {
+        const user = JSON.parse(stored);
+        if (user?.role === 'branch' && user?.branch && config.method === 'get') {
+          config.params = { ...config.params, branch: user.branch };
+        }
+      }
+    } catch {
+      // ignore parse errors
+    }
+  }
+  return config;
+});
+
 // ── Types matching backend ─────────────────────────────────
 export type NodeId = 'master' | 'cn1' | 'cn2' | 'cn3';
 export type QueryMode = 'linked' | 'direct' | 'replication';

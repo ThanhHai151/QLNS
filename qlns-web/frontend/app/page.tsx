@@ -4,9 +4,10 @@ import { useQuery } from '@tanstack/react-query';
 import { reportApi, employeeApi, NODE_COLORS, formatCurrency } from '@/lib/api';
 import { StatCard, BranchBar } from '@/components/ui/StatCard';
 import { QueryBadge } from '@/components/ui/QueryBadge';
+import { useAuth } from '@/lib/auth';
 import {
   Users, Banknote, FileText, Briefcase,
-  TrendingUp, Globe, AlertCircle, Loader2,
+  TrendingUp, Globe, AlertCircle, Loader2, Building2,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
@@ -14,6 +15,7 @@ import {
 } from 'recharts';
 
 export default function DashboardPage() {
+  const { user, isMaster } = useAuth();
   const { data: statsRes, isLoading: statsLoading, error: statsErr } = useQuery({
     queryKey: ['reports', 'global'],
     queryFn: () => reportApi.global().then((r) => r.data),
@@ -28,6 +30,12 @@ export default function DashboardPage() {
   const stats = statsRes?.data;
   const employees = empRes?.data ?? [];
   const isLoading = statsLoading || empLoading;
+
+  const BRANCH_COLORS_MAP: Record<string, string> = {
+    cn1: '#10b981', cn2: '#f59e0b', cn3: '#ef4444',
+  };
+  const branchColor = user?.nodeId ? BRANCH_COLORS_MAP[user.nodeId] ?? '#6366f1' : '#6366f1';
+
 
   if (isLoading) {
     return (
@@ -64,11 +72,36 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-7 p-4 md:p-6 bg-slate-900/40 rounded-2xl border border-white/5 mx-2 md:mx-4 mt-2">
+      {/* Branch banner — shown only for branch accounts */}
+      {!isMaster && user && (
+        <div
+          className="flex items-center gap-3 px-4 py-3 rounded-xl border"
+          style={{
+            backgroundColor: `${branchColor}12`,
+            borderColor: `${branchColor}35`,
+          }}
+        >
+          <Building2 className="h-5 w-5 flex-shrink-0" style={{ color: branchColor }} />
+          <div>
+            <p className="text-white/80 text-sm font-semibold">
+              Đang xem: <span style={{ color: branchColor }}>{user.branchLabel}</span>
+            </p>
+            <p className="text-white/35 text-xs">Dữ liệu được lọc theo chi nhánh của bạn</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard Tổng Quan</h1>
-          <p className="text-white/50 text-sm mt-1">Dữ liệu tổng hợp từ tất cả chi nhánh phân tán</p>
+          <h1 className="text-2xl font-bold text-white">
+            {isMaster ? 'Dashboard Tổng Quan' : `Dashboard — ${user?.branchLabel}`}
+          </h1>
+          <p className="text-white/50 text-sm mt-1">
+            {isMaster
+              ? 'Dữ liệu tổng hợp từ tất cả chi nhánh phân tán'
+              : 'Dữ liệu nhân sự của chi nhánh bạn quản lý'}
+          </p>
         </div>
         {statsRes?.meta && (
           <QueryBadge

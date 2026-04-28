@@ -903,6 +903,23 @@ export default function SqlTerminalPage() {
     }
   };
 
+  const closeAllTabsInPane = (paneId: 0 | 1) => {
+    const pTabs = tabs.filter(t => t.paneId === paneId);
+    const otherPaneTabs = tabs.filter(t => t.paneId !== paneId);
+    if (pTabs.length === 0) return;
+
+    if (otherPaneTabs.length > 0) {
+      // Other pane has tabs — safely close all tabs in this pane
+      setTabs(prev => prev.filter(t => t.paneId !== paneId));
+      setActiveIds(prev => ({ ...prev, [paneId]: null }));
+    } else {
+      // This is the only pane — keep exactly 1 fresh tab to avoid empty state
+      const freshTab = makeTab('master', INITIAL_SQL, paneId);
+      setTabs([freshTab]);
+      setActiveIds({ 0: paneId === 0 ? freshTab.id : null, 1: paneId === 1 ? freshTab.id : null });
+    }
+  };
+
   const renameTab = (id: string) => {
     const t = tabs.find(x => x.id === id);
     if (!t) return;
@@ -974,9 +991,37 @@ export default function SqlTerminalPage() {
             </div>
           </div>
         ))}
-        <button onClick={() => addTab(undefined, undefined, paneId)} style={{ padding: '0 10px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }}>
+        <button onClick={() => addTab(undefined, undefined, paneId)} style={{ padding: '0 10px', background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', flexShrink: 0 }} title="Thêm tab mới">
           <Plus size={14} />
         </button>
+        {tabs.filter(t => t.paneId === paneId).length > 0 && (
+          <button
+            onClick={() => closeAllTabsInPane(paneId)}
+            title="Đóng tất cả tab trong cửa sổ này"
+            style={{
+              display: 'flex', alignItems: 'center', gap: 4,
+              padding: '4px 10px', marginRight: 4,
+              background: 'none', border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 5, color: 'rgba(255,255,255,0.35)',
+              cursor: 'pointer', fontSize: 11, fontWeight: 500,
+              flexShrink: 0, transition: 'all 0.15s',
+              whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLButtonElement).style.color = '#f87171';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(248,113,113,0.3)';
+              (e.currentTarget as HTMLButtonElement).style.background = 'rgba(248,113,113,0.08)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.35)';
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.08)';
+              (e.currentTarget as HTMLButtonElement).style.background = 'none';
+            }}
+          >
+            <X size={11} />
+            Đóng tất cả
+          </button>
+        )}
       </div>
     );
   };
