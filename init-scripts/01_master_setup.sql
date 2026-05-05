@@ -135,48 +135,7 @@ CREATE TABLE BANGLUONG (
     FOREIGN KEY (IDBC) REFERENCES BANGCHAMCONG(IDBC)
 );
 
-CREATE TABLE UNGVIEN (
-    IDUV CHAR(10) PRIMARY KEY,
-    TENUV NVARCHAR(255),
-    GIOITINH NVARCHAR(10),
-    NGAYSINH DATE,
-    CCCD CHAR(12),
-    EMAIL VARCHAR(255),
-    DIACHI NVARCHAR(255),
-    DIENTHOAI VARCHAR(15),
-    DANTOC NVARCHAR(50),
-    TONGIAO NVARCHAR(50),
-    HONNHAN NVARCHAR(50),
-    TRINHDO CHAR(10),
-    TRANGTHAI NVARCHAR(50),
-    LUONG_DEAL DECIMAL(15,2),
-    FOREIGN KEY (TRINHDO) REFERENCES TRINHDO(IDTD)
-);
 
-CREATE TABLE TUYENDUNG (
-    MATD CHAR(10) PRIMARY KEY,
-    IDCN CHAR(10),
-    VITRITD NVARCHAR(255),
-    DOTUOI INT,
-    GIOITINH NVARCHAR(10),
-    SOLUONG INT,
-    HANTD DATE,
-    LUONGTOITHIEU DECIMAL(10, 2),
-    LUONGTOIDA DECIMAL(10, 2),
-    SOHOSODANAOP INT,
-    SOHOSODATUYEN INT,
-    TRANGTHAI NVARCHAR(50),
-    FOREIGN KEY (IDCN) REFERENCES CHINHANH(IDCN)
-);
-
-CREATE TABLE UNGVIEN_UNGTUYEN (
-    IDUV CHAR(10),
-    IDTD CHAR(10),
-    NGAYUT DATE,
-    PRIMARY KEY (IDUV, IDTD),
-    FOREIGN KEY (IDUV) REFERENCES UNGVIEN(IDUV),
-    FOREIGN KEY (IDTD) REFERENCES TUYENDUNG(MATD)
-);
 
 CREATE TABLE NHOMQUYEN (
     IDNQ CHAR(10) PRIMARY KEY,
@@ -349,45 +308,6 @@ INSERT INTO BANGLUONG (IDBL, IDBC, LUONGCOBAN, LUONGTHUCTE, THUETNCN, LUONGTHUON
 ('BL010', 'BCC010',  7000000.00,  7000000.00*(22.0/26.0)+(1.0*(7000000.00/26/8)*1.5),        0.00,       0.00,       0.00,       0.00,      0.00,   0.00,   (7000000.00*(22.0/26.0)+(1.0*(7000000.00/26/8)*1.5))),
 ('BL011', 'BCC011', 20000000.00, 20000000.00*(26.0/26.0)+(12.0*(20000000.00/26/8)*1.5), 400000.00,  900000.00, 2500000.00, 1800000.00, 400000.00,   0.00,   (20000000.00*(26.0/26.0)+(12.0*(20000000.00/26/8)*1.5))-400000.00+900000.00+2500000.00-1800000.00+400000.00),
 ('BL012', 'BCC012', 10000000.00, 10000000.00*(20.0/26.0)+(3.0*(10000000.00/26/8)*1.5),   50000.00,  200000.00,       0.00,  800000.00,  50000.00, 100000.00,(10000000.00*(20.0/26.0)+(3.0*(10000000.00/26/8)*1.5))-50000.00+200000.00+0.00-800000.00+50000.00-100000.00);
-GO
-
-INSERT INTO UNGVIEN (IDUV, TENUV, GIOITINH, NGAYSINH, CCCD, EMAIL, DIACHI, DIENTHOAI, DANTOC, TONGIAO, HONNHAN, TRINHDO, TRANGTHAI, LUONG_DEAL) VALUES
-('UV001', N'Nguyễn Văn Z',  N'Nam', '1996-08-18', '003123456789', 'znv@example.com', N'789 Đường Z, TP.HCM',  '0941112223', N'Kinh',  N'Không',          N'Độc thân',   'TD001', N'Mới',          12000000.00),
-('UV002', N'Trần Thị Y',    N'Nữ',  '1998-01-25', '003234567890', 'ytt@example.com', N'101 Đường Y, Hà Nội',  '0944445556', N'Kinh',  N'Phật giáo',      N'Độc thân',   'TD002', N'Đang xử lý',  10000000.00),
-('UV003', N'Lê Văn X',      N'Nam', '1994-11-05', '003345678901', 'xlv@example.com', N'202 Đường X, Đà Nẵng', '0947778889', N'Kinh',  N'Không',          N'Đã kết hôn', 'TD003', N'Đã phỏng vấn',11000000.00),
-('UV004', N'Phạm Thị W',    N'Nữ',  '1999-03-14', '003456789012', 'wtp@example.com', N'303 Đường W, Hà Nội',  '0949990001', N'Kinh',  N'Thiên Chúa giáo',N'Độc thân',   'TD004', N'Mới',          9000000.00),
-('UV005', N'Hoàng Văn V',   N'Nam', '1997-07-22', '003567890123', 'vhv@example.com', N'404 Đường V, TP.HCM',  '0961112223', N'Hoa',   N'Không',          N'Độc thân',   'TD001', N'Đang xử lý',  13000000.00),
-('UV006', N'Nguyễn Thị U',  N'Nữ',  '1995-05-01', '003678901234', 'unt@example.com', N'505 Đường U, Hà Nội',  '0964445556', N'Kinh',  N'Phật giáo',      N'Đã kết hôn', 'TD002', N'Đã phỏng vấn',10500000.00),
-('UV007', N'Trần Văn T',    N'Nam', '1993-09-09', '003789012345', 'ttv@example.com', N'606 Đường T, Đà Nẵng', '0967778889', N'Kinh',  N'Không',          N'Độc thân',   'TD003', N'Mới',          11500000.00),
-('UV008', N'Lê Thị S',      N'Nữ',  '1990-12-03', '003890123456', 'slt@example.com', N'707 Đường S, TP.HCM',  '0969990001', N'Kinh',  N'Thiên Chúa giáo',N'Đã kết hôn', 'TD004', N'Đang xử lý',   9500000.00),
-('UV009', N'Phạm Văn R',    N'Nam', '1992-06-20', '003901234567', 'rpv@example.com', N'808 Đường R, TP.HCM',  '0981112223', N'Chăm',  N'Hồi giáo',       N'Độc thân',   'TD001', N'Đã phỏng vấn',12500000.00),
-('UV010', N'Hoàng Thị Q',   N'Nữ',  '2000-04-11', '004012345678', 'qht@example.com', N'909 Đường Q, Hà Nội',  '0984445556', N'Kinh',  N'Không',          N'Độc thân',   'TD005', N'Mới',          8000000.00),
-('UV011', N'Nguyễn Văn P',  N'Nam', '1987-02-28', '004123456789', 'pnv@example.com', N'111 Đường P, Đà Nẵng', '0987778889', N'Kinh',  N'Phật giáo',      N'Đã kết hôn', 'TD007', N'Đã phỏng vấn',18000000.00),
-('UV012', N'Trần Thị O',    N'Nữ',  '1999-10-07', '004234567890', 'ott@example.com', N'222 Đường O, Đà Nẵng', '0989990001', N'Khmer', N'Phật giáo',      N'Độc thân',   'TD005', N'Đang xử lý',   8500000.00);
-GO
-
-INSERT INTO TUYENDUNG (MATD, IDCN, VITRITD, DOTUOI, GIOITINH, SOLUONG, HANTD, LUONGTOITHIEU, LUONGTOIDA, SOHOSODANAOP, SOHOSODATUYEN, TRANGTHAI) VALUES
-('TD001', 'CN1', N'Nhân viên Kinh doanh',         22, N'Không', 5, '2024-12-31', 8000000.00,  15000000.00, 15, 3, N'Đang tuyển'),
-('TD002', 'CN2', N'Chuyên viên Marketing',         25, N'Không', 3, '2024-11-30', 10000000.00, 18000000.00, 10, 2, N'Đang tuyển'),
-('TD003', 'CN3', N'Nhân viên Kế toán',             22, N'Nữ',    2, '2024-10-31', 9000000.00,  14000000.00,  8, 1, N'Đang tuyển'),
-('TD004', 'CN3', N'Nhân viên IT Helpdesk',         23, N'Nam',   2, '2024-12-15', 10000000.00, 16000000.00, 12, 1, N'Đang tuyển'),
-('TD005', 'CN2', N'Thực tập sinh Nhân sự',         20, N'Không', 3, '2024-09-30', 3000000.00,   5000000.00, 20, 2, N'Đang tuyển'),
-('TD006', 'CN3', N'Trưởng phòng Kinh doanh',       30, N'Không', 1, '2024-11-15', 20000000.00, 30000000.00,  5, 0, N'Đang tuyển'),
-('TD007', 'CN1', N'Nhân viên Chăm sóc khách hàng', 22, N'Nữ',   4, '2024-12-01', 7000000.00,  12000000.00, 18, 3, N'Đang tuyển'),
-('TD008', 'CN1', N'Nhân viên Hành chính văn phòng', 22, N'Không',2, '2024-10-20', 8000000.00,  13000000.00,  9, 1, N'Đang tuyển'),
-('TD009', 'CN2', N'Nhân viên Phát triển phần mềm', 24, N'Nam',  3, '2024-11-10', 15000000.00, 25000000.00, 11, 1, N'Đang tuyển'),
-('TD010', 'CN1', N'Thiết kế đồ họa',               23, N'Không', 2, '2024-12-25', 10000000.00, 17000000.00,  7, 1, N'Đang tuyển'),
-('TD011', 'CN2', N'Nhân viên Digital Marketing',   24, N'Không', 3, '2024-11-20', 11000000.00, 19000000.00, 14, 2, N'Đang tuyển'),
-('TD012', 'CN2', N'Nhân viên Tư vấn tài chính',    25, N'Không', 4, '2024-12-10', 9000000.00,  18000000.00, 16, 2, N'Đang tuyển');
-GO
-
-INSERT INTO UNGVIEN_UNGTUYEN (IDUV, IDTD, NGAYUT) VALUES
-('UV001', 'TD001', '2024-08-01'), ('UV002', 'TD002', '2024-08-05'),
-('UV003', 'TD003', '2024-08-02'), ('UV004', 'TD001', '2024-08-03'),
-('UV005', 'TD004', '2024-08-06'), ('UV006', 'TD002', '2024-08-07'),
-('UV007', 'TD001', '2024-08-04'), ('UV008', 'TD003', '2024-08-08'),
-('UV009', 'TD004', '2024-08-09'), ('UV010', 'TD005', '2024-08-10'),
-('UV001', 'TD006', '2024-08-11'), ('UV002', 'TD007', '2024-08-12');
 GO
 
 INSERT INTO NHOMQUYEN (IDNQ, TENNHOMQUYEN, MOTA) VALUES

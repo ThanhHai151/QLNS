@@ -6,7 +6,7 @@ import { StatCard, BranchBar } from '@/components/ui/StatCard';
 import { QueryBadge } from '@/components/ui/QueryBadge';
 import { useAuth } from '@/lib/auth';
 import {
-  Users, Banknote, FileText, Briefcase,
+  Users, Banknote, FileText,
   TrendingUp, Globe, AlertCircle, Loader2, Building2,
 } from 'lucide-react';
 import {
@@ -134,13 +134,6 @@ export default function DashboardPage() {
           subtitle="Đang có hiệu lực"
           icon={<FileText className="h-6 w-6" />}
           color="amber"
-        />
-        <StatCard
-          title="Tuyển dụng mở"
-          value={stats?.openRecruitments ?? 0}
-          subtitle="Vị trí đang tuyển"
-          icon={<Briefcase className="h-6 w-6" />}
-          color="purple"
         />
       </div>
 

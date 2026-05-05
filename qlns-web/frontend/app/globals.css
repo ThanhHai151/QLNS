@@ -27,6 +27,8 @@
   user-select: none;
   min-width: 42px;
   flex-shrink: 0;
+  /* height: 100% bounds this div to the container so scrollTop sync works */
+  height: 100%;
   /* Scroll is controlled programmatically via syncScroll — never show bar */
   overflow-y: hidden;
   /* Must match textarea line-height so scrollTop stays in sync */

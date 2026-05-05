@@ -12,7 +12,6 @@ import {
   salaryRoutes,
   attendanceRoutes,
   contractRoutes,
-  recruitmentRoutes,
   reportRoutes,
   lookupRoutes,
 } from './routes/other.routes';
@@ -45,7 +44,6 @@ async function bootstrap() {
   app.register(salaryRoutes,       { prefix: '/api/salaries' });
   app.register(attendanceRoutes,   { prefix: '/api/attendance' });
   app.register(contractRoutes,     { prefix: '/api/contracts' });
-  app.register(recruitmentRoutes,  { prefix: '/api/recruitment' });
   app.register(reportRoutes,       { prefix: '/api/reports' });
   app.register(lookupRoutes,       { prefix: '/api/lookup' });
   app.register(queryRoutes,        { prefix: '/api/query' });
@@ -67,7 +65,6 @@ async function bootstrap() {
       'GET  /api/salaries',
       'GET  /api/attendance',
       'GET  /api/contracts',
-      'GET  /api/recruitment',
       'GET  /api/reports/global',
       'GET  /api/lookup/branches',
       'GET  /api/lookup/positions',

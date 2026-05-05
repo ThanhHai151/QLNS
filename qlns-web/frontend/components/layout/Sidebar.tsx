@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, Banknote, Clock3, FileText,
-  BarChart3, Server, Briefcase, ChevronLeft, ChevronRight,
+  BarChart3, Server, ChevronLeft, ChevronRight,
   Building2, Database, LogOut, ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -19,7 +19,6 @@ const navItems = [
   { href: '/salaries',    label: 'Bảng lương',   icon: Banknote,        masterOnly: false },
   { href: '/attendance',  label: 'Chấm công',    icon: Clock3,          masterOnly: false },
   { href: '/contracts',   label: 'Hợp đồng',     icon: FileText,        masterOnly: false },
-  { href: '/recruitment', label: 'Tuyển dụng',   icon: Briefcase,       masterOnly: false },
   { href: '/reports',     label: 'Báo cáo',      icon: BarChart3,       masterOnly: true  },
   { href: '/system',      label: 'Hệ thống',     icon: Server,          masterOnly: true  },
   { href: '/sql',         label: 'SQL Terminal', icon: Database,        masterOnly: true  },

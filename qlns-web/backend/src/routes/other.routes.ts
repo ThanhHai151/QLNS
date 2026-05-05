@@ -53,53 +53,6 @@ export async function contractRoutes(app: FastifyInstance) {
   });
 }
 
-export async function recruitmentRoutes(app: FastifyInstance) {
-  // Allow empty body for DELETE requests
-  app.addContentTypeParser('application/json', { parseAs: 'string' }, function (req, body, done) {
-    if (!body || (body as string).trim() === '') { done(null, {}); return; }
-    try { done(null, JSON.parse(body as string)); } catch (err) { done(err as Error, undefined); }
-  });
-
-  app.get<{ Querystring: { branch?: string } }>('/', async (req, reply) => {
-    const start = Date.now();
-    try {
-      const { data, sourceNodes } = await svc.getRecruitments(req.query.branch);
-      return reply.send({
-        success: true, data,
-        meta: { totalRows: data.length, sourceNodes, queryMode: process.env.QUERY_MODE, executionTimeMs: Date.now() - start },
-      });
-    } catch (err) {
-      return reply.status(500).send({ success: false, error: (err as Error).message });
-    }
-  });
-
-  app.post<{ Body: import('../types').CreateRecruitmentDto }>('/', async (req, reply) => {
-    try {
-      const { sourceNodes } = await svc.createRecruitment(req.body);
-      return reply.send({ success: true, meta: { sourceNodes } });
-    } catch (err) {
-      return reply.status(500).send({ success: false, error: (err as Error).message });
-    }
-  });
-
-  app.put<{ Params: { id: string }, Body: import('../types').UpdateRecruitmentDto }>('/:id', async (req, reply) => {
-    try {
-      const { sourceNodes } = await svc.updateRecruitment(req.params.id, req.body);
-      return reply.send({ success: true, meta: { sourceNodes } });
-    } catch (err) {
-      return reply.status(500).send({ success: false, error: (err as Error).message });
-    }
-  });
-
-  app.delete<{ Params: { id: string } }>('/:id', async (req, reply) => {
-    try {
-      const { sourceNodes } = await svc.deleteRecruitment(req.params.id);
-      return reply.send({ success: true, meta: { sourceNodes } });
-    } catch (err) {
-      return reply.status(500).send({ success: false, error: (err as Error).message });
-    }
-  });
-}
 
 export async function reportRoutes(app: FastifyInstance) {
   // GET /api/reports/global — aggregate from all branches

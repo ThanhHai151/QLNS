@@ -125,15 +125,15 @@ UNION ALL
 SELECT 'CN3', COUNT(*) FROM QLNS_CN3.QuanLyNhanSu.dbo.HOPDONG WHERE TRANGTHAI = N'Có hiệu lực';
 GO
 
--- 4.3 Số vị trí đang tuyển dụng tại mỗi chi nhánh
-SELECT 'CN1 - Ha Noi'   AS CHI_NHANH, COUNT(*) AS SO_VI_TRI_TUYEN
-FROM QLNS_CN1.QuanLyNhanSu.dbo.TUYENDUNG WHERE TRANGTHAI = N'Đang tuyển'
-UNION ALL
-SELECT 'CN2 - Da Nang',  COUNT(*)
-FROM QLNS_CN2.QuanLyNhanSu.dbo.TUYENDUNG WHERE TRANGTHAI = N'Đang tuyển'
-UNION ALL
-SELECT 'CN3 - TP.HCM',  COUNT(*)
-FROM QLNS_CN3.QuanLyNhanSu.dbo.TUYENDUNG WHERE TRANGTHAI = N'Đang tuyển';
+-- 4.3 [ĐÃ XÓA] Bảng TUYENDUNG đã bị loại khỏi hệ thống
+-- SELECT 'CN1 - Ha Noi'   AS CHI_NHANH, COUNT(*) AS SO_VI_TRI_TUYEN
+-- FROM QLNS_CN1.QuanLyNhanSu.dbo.TUYENDUNG WHERE TRANGTHAI = N'Đang tuyển'
+-- UNION ALL
+-- SELECT 'CN2 - Da Nang',  COUNT(*)
+-- FROM QLNS_CN2.QuanLyNhanSu.dbo.TUYENDUNG WHERE TRANGTHAI = N'Đang tuyển'
+-- UNION ALL
+-- SELECT 'CN3 - TP.HCM',  COUNT(*)
+-- FROM QLNS_CN3.QuanLyNhanSu.dbo.TUYENDUNG WHERE TRANGTHAI = N'Đang tuyển';
 GO
 
 -- 4.4 Kiểm tra Linked Server có hoạt động không

@@ -148,41 +148,6 @@ export interface Contract {
   _sourceNode?: NodeId;
 }
 
-export interface Recruitment {
-  MATD: string;
-  IDCN: string;
-  VITRITD: string;
-  DOTUOI: number;
-  GIOITINH: string;
-  SOLUONG: number;
-  HANTD: string;
-  LUONGTOITHIEU: number;
-  LUONGTOIDA: number;
-  SOHOSODANAOP: number;
-  SOHOSODATUYEN: number;
-  TRANGTHAI: string;
-  TEN_CHINHANH?: string;
-  _sourceNode?: NodeId;
-}
-
-export interface CreateRecruitmentDto {
-  MATD: string;
-  IDCN: string;
-  VITRITD: string;
-  DOTUOI: number;
-  GIOITINH: string;
-  SOLUONG: number;
-  HANTD: string;
-  LUONGTOITHIEU: number;
-  LUONGTOIDA: number;
-  TRANGTHAI: string;
-}
-
-export interface UpdateRecruitmentDto extends Partial<Omit<CreateRecruitmentDto, 'MATD' | 'IDCN'>> {
-  SOHOSODANAOP?: number;
-  SOHOSODATUYEN?: number;
-}
-
 // ── Báo cáo tổng hợp ─────────────────────────────────────────
 export interface GlobalStats {
   totalEmployees: number;
@@ -190,7 +155,6 @@ export interface GlobalStats {
   avgSalary: number;
   totalSalaryPaid: number;
   activeContracts: number;
-  openRecruitments: number;
 }
 
 export interface BranchSalaryReport {

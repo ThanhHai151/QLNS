@@ -2,7 +2,7 @@ import { Client } from '@libsql/client';
 import { db, NodeId } from '../config/database';
 import type {
   Employee, CreateEmployeeDto, UpdateEmployeeDto,
-  Salary, Attendance, Contract, Recruitment,
+  Salary, Attendance, Contract,
   GlobalStats, BranchSalaryReport, QueryMode,
   Position, Education, Department
 } from '../types';
@@ -309,144 +309,6 @@ export async function getContracts(filterBranch?: string): Promise<{ data: Contr
 }
 
 // ============================================================
-// RECRUITMENT SERVICE
-// ============================================================
-export async function getRecruitments(filterBranch?: string): Promise<{ data: Recruitment[]; sourceNodes: NodeId[] }> {
-  const buildQuery = (chinhanh: string) => ({
-    sql: `
-      SELECT td.*, cn.TENCNHANH AS TEN_CHINHANH
-      FROM TUYENDUNG td
-      LEFT JOIN CHINHANH cn ON td.IDCN = cn.IDCN
-      WHERE td.IDCN = ? AND (td.IsDeleted = 0 OR td.IsDeleted IS NULL)
-    `,
-    args: [chinhanh],
-  });
-
-  if (filterBranch) {
-    const nodeId = db.getNodeForBranch(filterBranch);
-    const chinhanh = NODE_TO_CHINHANH[nodeId] ?? filterBranch.toUpperCase();
-    const result = await queryNode<Recruitment>(nodeId, (client) => client.execute(buildQuery(chinhanh)));
-    return { data: result.rows.map(r => ({ ...r, _sourceNode: nodeId as NodeId })), sourceNodes: [nodeId] };
-  }
-
-  const { rows, sourceNodes } = await queryAllBranches<Recruitment>(
-    (client, nodeId) => client.execute(buildQuery(NODE_TO_CHINHANH[nodeId] ?? 'CN1'))
-  );
-  return { data: rows, sourceNodes };
-}
-
-export async function getRecruitmentById(matd: string): Promise<{ data: Recruitment | null; sourceNode: NodeId | null }> {
-  const branches = db.getAllBranchNodeIds();
-  for (const nodeId of branches) {
-    const result = await queryNode<Recruitment>(nodeId, (client) =>
-      client.execute({
-        sql: `
-          SELECT td.*, cn.TENCNHANH AS TEN_CHINHANH
-          FROM TUYENDUNG td
-          LEFT JOIN CHINHANH cn ON td.IDCN = cn.IDCN
-          WHERE td.MATD = ? AND (td.IsDeleted = 0 OR td.IsDeleted IS NULL)
-        `,
-        args: [matd]
-      })
-    );
-    if (result.success && result.rows.length > 0) {
-      return { data: { ...result.rows[0], _sourceNode: nodeId as NodeId }, sourceNode: nodeId };
-    }
-  }
-  return { data: null, sourceNode: null };
-}
-
-export async function createRecruitment(data: import('../types').CreateRecruitmentDto): Promise<{ sourceNodes: NodeId[] }> {
-  const branchNodeId = db.getNodeForBranch(data.IDCN);
-  const sourceNodes: NodeId[] = [];
-
-  const queryPayload = {
-    sql: `
-      INSERT INTO TUYENDUNG 
-      (MATD,IDCN,VITRITD,DOTUOI,GIOITINH,SOLUONG,HANTD,LUONGTOITHIEU,LUONGTOIDA,SOHOSODANAOP,SOHOSODATUYEN,TRANGTHAI)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
-    `,
-    args: [
-      data.MATD, data.IDCN, data.VITRITD, data.DOTUOI, data.GIOITINH, data.SOLUONG,
-      data.HANTD ? String(data.HANTD) : null, data.LUONGTOITHIEU, data.LUONGTOIDA, 0, 0, data.TRANGTHAI || 'Đang tuyển'
-    ]
-  };
-
-  const branchClient = await db.getPoolOrThrow(branchNodeId);
-  await branchClient.execute(queryPayload);
-  sourceNodes.push(branchNodeId);
-
-  if (branchNodeId !== 'master' && db.isOnline('master')) {
-    try {
-      const masterClient = await db.getPoolOrThrow('master');
-      await masterClient.execute(queryPayload);
-      sourceNodes.push('master');
-    } catch {}
-  }
-
-  return { sourceNodes };
-}
-
-export async function updateRecruitment(matd: string, data: import('../types').UpdateRecruitmentDto): Promise<{ sourceNodes: NodeId[] }> {
-  const { data: rec, sourceNode } = await getRecruitmentById(matd);
-  if (!rec || !sourceNode) throw new Error(`Recruitment ${matd} not found`);
-
-  const updates: string[] = [];
-  const args: any[] = [];
-  
-  if (data.VITRITD !== undefined) { updates.push('VITRITD=?'); args.push(data.VITRITD); }
-  if (data.DOTUOI !== undefined) { updates.push('DOTUOI=?'); args.push(data.DOTUOI); }
-  if (data.GIOITINH !== undefined) { updates.push('GIOITINH=?'); args.push(data.GIOITINH); }
-  if (data.SOLUONG !== undefined) { updates.push('SOLUONG=?'); args.push(data.SOLUONG); }
-  if (data.HANTD !== undefined) { updates.push('HANTD=?'); args.push(String(data.HANTD)); }
-  if (data.LUONGTOITHIEU !== undefined) { updates.push('LUONGTOITHIEU=?'); args.push(data.LUONGTOITHIEU); }
-  if (data.LUONGTOIDA !== undefined) { updates.push('LUONGTOIDA=?'); args.push(data.LUONGTOIDA); }
-  if (data.SOHOSODANAOP !== undefined) { updates.push('SOHOSODANAOP=?'); args.push(data.SOHOSODANAOP); }
-  if (data.SOHOSODATUYEN !== undefined) { updates.push('SOHOSODATUYEN=?'); args.push(data.SOHOSODATUYEN); }
-  if (data.TRANGTHAI !== undefined) { updates.push('TRANGTHAI=?'); args.push(data.TRANGTHAI); }
-
-  if (updates.length > 0) {
-      args.push(matd);
-      const queryPayload = { sql: `UPDATE TUYENDUNG SET ${updates.join(',')} WHERE MATD=?`, args };
-
-      const sourceNodes: NodeId[] = [];
-      const branchClient = await db.getPoolOrThrow(sourceNode);
-      await branchClient.execute(queryPayload);
-      sourceNodes.push(sourceNode);
-
-      if (sourceNode !== 'master' && db.isOnline('master')) {
-        try {
-          const masterClient = await db.getPoolOrThrow('master');
-          await masterClient.execute(queryPayload);
-          sourceNodes.push('master');
-        } catch {}
-      }
-      return { sourceNodes };
-  }
-  return { sourceNodes: [sourceNode] };
-}
-
-export async function deleteRecruitment(matd: string): Promise<{ sourceNodes: NodeId[] }> {
-  const { data: rec, sourceNode } = await getRecruitmentById(matd);
-  if (!rec || !sourceNode) throw new Error(`Recruitment ${matd} not found`);
-
-  const doDelete = async (nodeId: NodeId): Promise<boolean> => {
-    try {
-      const client = await db.getPoolOrThrow(nodeId);
-      await client.execute({ sql: 'UPDATE TUYENDUNG SET IsDeleted = 1 WHERE MATD=?', args: [matd] });
-      return true;
-    } catch { return false; }
-  };
-
-  const sourceNodes: NodeId[] = [];
-  if (await doDelete(sourceNode)) sourceNodes.push(sourceNode);
-  if (sourceNode !== 'master' && db.isOnline('master')) {
-    if (await doDelete('master')) sourceNodes.push('master');
-  }
-  return { sourceNodes };
-}
-
-// ============================================================
 // GLOBAL STATS — aggregate from all branches
 // ============================================================
 export async function getGlobalStats(): Promise<{ data: GlobalStats; sourceNodes: NodeId[] }> {
@@ -466,7 +328,7 @@ export async function getGlobalStats(): Promise<{ data: GlobalStats; sourceNodes
 
   const countResults = await Promise.all(statsPromises);
 
-  const [salaryRes, contractRes, recruitRes] = await Promise.all([
+  const [salaryRes, contractRes] = await Promise.all([
     queryAllBranches<{ avgSalary: number; totalSalary: number }>((client) =>
       client.execute(`
         SELECT AVG(THUCNHAN) AS avgSalary, SUM(THUCNHAN) AS totalSalary
@@ -478,18 +340,12 @@ export async function getGlobalStats(): Promise<{ data: GlobalStats; sourceNodes
         SELECT COUNT(*) AS activeContracts FROM HOPDONG WHERE TRANGTHAI = 'Có hiệu lực'
       `)
     ),
-    queryAllBranches<{ openRecruitments: number }>((client) =>
-      client.execute(`
-        SELECT COUNT(*) AS openRecruitments FROM TUYENDUNG WHERE TRANGTHAI = 'Đang tuyển'
-      `)
-    )
   ]);
 
   const totalEmployees = countResults.reduce((a, r) => a + (r.rows[0]?.count || 0), 0);
   const avgSalary = salaryRes.rows.reduce((a, r) => a + (r.avgSalary || 0), 0) / (salaryRes.rows.length || 1);
   const totalSalaryPaid = salaryRes.rows.reduce((a, r) => a + (r.totalSalary || 0), 0);
   const activeContracts = contractRes.rows.reduce((a, r) => a + (r.activeContracts || 0), 0);
-  const openRecruitments = recruitRes.rows.reduce((a, r) => a + (r.openRecruitments || 0), 0);
 
   const byBranch = countResults
     .filter(r => r.success)
@@ -506,7 +362,7 @@ export async function getGlobalStats(): Promise<{ data: GlobalStats; sourceNodes
     });
 
   return {
-    data: { totalEmployees, byBranch, avgSalary, totalSalaryPaid, activeContracts, openRecruitments },
+    data: { totalEmployees, byBranch, avgSalary, totalSalaryPaid, activeContracts },
     sourceNodes: countResults.filter(r => r.success).map(r => r.nodeId),
   };
 }

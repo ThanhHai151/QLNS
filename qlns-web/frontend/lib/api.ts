@@ -139,30 +139,12 @@ export interface Contract {
   _sourceNode?: NodeId;
 }
 
-export interface Recruitment {
-  MATD: string;
-  IDCN: string;
-  VITRITD: string;
-  DOTUOI: number;
-  GIOITINH: string;
-  SOLUONG: number;
-  HANTD: string;
-  LUONGTOITHIEU: number;
-  LUONGTOIDA: number;
-  SOHOSODANAOP: number;
-  SOHOSODATUYEN: number;
-  TRANGTHAI: string;
-  TEN_CHINHANH?: string;
-  _sourceNode?: NodeId;
-}
-
 export interface GlobalStats {
   totalEmployees: number;
   byBranch: { branch: string; city: string; count: number; nodeId: NodeId }[];
   avgSalary: number;
   totalSalaryPaid: number;
   activeContracts: number;
-  openRecruitments: number;
 }
 
 // ── API functions ──────────────────────────────────────────
@@ -191,13 +173,6 @@ export const attendanceApi = {
 
 export const contractApi = {
   list: (branch?: string) => api.get<ApiResponse<Contract[]>>('/api/contracts', { params: { branch } }),
-};
-
-export const recruitmentApi = {
-  list: (branch?: string) => api.get<ApiResponse<Recruitment[]>>('/api/recruitment', { params: { branch } }),
-  create: (data: Partial<Recruitment>) => api.post<ApiResponse<any>>('/api/recruitment', data),
-  update: (id: string, data: Partial<Recruitment>) => api.put<ApiResponse<any>>(`/api/recruitment/${id}`, data),
-  delete: (id: string) => api.delete<ApiResponse<any>>(`/api/recruitment/${id}`),
 };
 
 export const systemApi = {

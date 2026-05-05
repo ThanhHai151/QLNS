@@ -33,7 +33,6 @@ const EXAMPLE_QUERIES = [
   { label: 'Bảng lương TOP 10', sql: "SELECT cc.IDNV, n.TENNV, b.LUONGCOBAN, b.LUONGTHUCTE, b.THUCNHAN\nFROM BANGLUONG b\nJOIN BANGCHAMCONG cc ON b.IDBC = cc.IDBC\nJOIN NHANVIEN n ON cc.IDNV = n.IDNV\nORDER BY b.THUCNHAN DESC\nLIMIT 10;" },
   { label: 'Cột bảng NHANVIEN', sql: "PRAGMA table_info('NHANVIEN');" },
   { label: 'Hợp đồng lao động', sql: "SELECT h.SODH, n.TENNV, h.NGAYBATDAU, h.NGAYKETTHUC, h.LUONGCOBAN, h.TRANGTHAI\nFROM HOPDONG h\nJOIN NHANVIEN n ON h.IDNV = n.IDNV\nWHERE h.IsDeleted = 0 OR h.IsDeleted IS NULL\nORDER BY h.NGAYBATDAU DESC\nLIMIT 10;" },
-  { label: 'Tuyển dụng mở', sql: "SELECT VITRITD, SOLUONG, LUONGTOITHIEU, LUONGTOIDA, TRANGTHAI, IDCN\nFROM TUYENDUNG\nWHERE TRANGTHAI = 'Đang tuyển'\nORDER BY SOLUONG DESC;" },
   { label: 'Chấm công T1/2024', sql: "SELECT cc.IDNV, n.TENNV, cc.THANG, cc.NAM, cc.TONGNGAYLAM, cc.SONGAYNGHI, cc.SOGIOTANGCA\nFROM BANGCHAMCONG cc\nJOIN NHANVIEN n ON cc.IDNV = n.IDNV\nWHERE cc.THANG = 1 AND cc.NAM = 2024\nLIMIT 20;" },
   { label: 'Xem chi nhánh CN1', sql: "-- Truy vấn dữ liệu riêng của CN1 (Hà Nội)\n-- Chọn node CN1 Hà Nội ở toolbar để xem đúng phân mảnh\nSELECT IDNV, TENNV, GIOITINH, EMAIL, DIENTHOAI, CHINHANH\nFROM NHANVIEN\nWHERE (IsDeleted = 0 OR IsDeleted IS NULL)\nORDER BY TENNV\nLIMIT 20;" },
   { label: '@node directive', sql: "-- ═══ CROSS-NODE ROUTING ═══════════════════════════════\n-- Tương đương: UPDATE QLNS_CN2.dbo.NHANVIEN SET ...\n-- Dùng directive -- @node: <nodeId> để route sang node khác\n-- Dù đang ở node nào, query sẽ chạy trên node chỉ định\n-- ═══════════════════════════════════════════════════════\n\n-- @node: cn2\nUPDATE NHANVIEN\nSET DIENTHOAI = '0988777666'\nWHERE IDNV = 'NV002';\n\n-- Kết quả: thực thi trên CN2 Đà Nẵng thay vì node hiện tại" },
@@ -175,7 +174,6 @@ const DOC_CONTENT = `# Tài liệu Hệ thống CSDL Phân Tán
 | BANGCHAMCONG | Bảng chấm công | Theo CN nhân viên |
 | BANGLUONG | Bảng lương | Theo CN nhân viên |
 | HOPDONG | Hợp đồng lao động | Theo CN |
-| TUYENDUNG | Tuyển dụng | Theo CN |
 | CHUCVU | Chức vụ (lookup) | Tập trung Master |
 | PHONGBAN | Phòng ban | Master + CN |
 | CHINHANH | Danh sách chi nhánh | Master |
@@ -230,17 +228,6 @@ JOIN BANGCHAMCONG cc ON n.IDNV = cc.IDNV
 JOIN BANGLUONG b ON cc.IDBC = b.IDBC
 GROUP BY n.CHINHANH
 ORDER BY LuongTB DESC
-\`\`\`
-
-### 4. Phân tích tuyển dụng
-\`\`\`sql
-SELECT 
-  t.VITRITD, t.SOLUONG,
-  t.SOHOSODATUYEN, t.TRANGTHAI,
-  c.TENCNHANH
-FROM TUYENDUNG t
-JOIN CHINHANH c ON t.IDCN = c.IDCN
-ORDER BY t.SOLUONG DESC
 \`\`\`
 
 ## ⚡ Tips SQL Terminal
